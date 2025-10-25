@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-karaoke-bg text-white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-karaoke-primary hover:bg-karaoke-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-karaoke-secondary hover:bg-karaoke-secondary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-karaoke-card border border-karaoke-accent rounded-xl p-6 shadow-lg;
+  }
+  
+  .input-field {
+    @apply bg-karaoke-accent border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-karaoke-primary focus:outline-none transition-colors;
+  }
+
+  .karaoke-overlay {
+    @apply fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center;
+  }
+
+  .score-display {
+    @apply text-center p-6 bg-karaoke-card rounded-xl border border-karaoke-accent;
+  }
+
+  .note-display {
+    @apply text-2xl font-bold;
+  }
+
+  .target-note {
+    @apply text-karaoke-primary;
+  }
+
+  .user-note {
+    @apply text-karaoke-success;
+  }
+
+  .accuracy-perfect {
+    @apply text-karaoke-success;
+  }
+
+  .accuracy-good {
+    @apply text-karaoke-warning;
+  }
+
+  .accuracy-poor {
+    @apply text-karaoke-primary;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Video player styles */
+video {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Status message animations */
+.status-enter {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.status-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.status-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.status-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 300ms, transform 300ms;
+}
