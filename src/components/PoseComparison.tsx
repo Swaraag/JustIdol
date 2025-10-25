@@ -73,7 +73,7 @@ export default function PoseComparison({
   // Smoothing buffers for temporal filtering
   const webcamLandmarksBufferRef = useRef<any[][]>([]);
   const videoLandmarksBufferRef = useRef<any[][]>([]);
-  const SMOOTHING_FRAMES = 3; // Number of frames to average
+  const SMOOTHING_FRAMES = 5; // Number of frames to average
 
   // Smooth landmarks by averaging over multiple frames
   const smoothLandmarks = useCallback(
@@ -173,9 +173,11 @@ export default function PoseComparison({
   );
 
   useEffect(() => {
-    const initializePoseLandmarker = async () => {
+    let mounted = true;
+
+    async function init() {
       try {
-        // Initialize the FilesetResolver and PoseLandmarker
+        // Initialize PoseLandmarker
         const vision = await FilesetResolver.forVisionTasks(
           "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
         );
@@ -190,44 +192,39 @@ export default function PoseComparison({
           numPoses: 1,
           minPoseDetectionConfidence: 0.7,
           minPosePresenceConfidence: 0.7,
-          minTrackingConfidence: 0.8,
+          minTrackingConfidence: 0.7,
         });
+
+        if (!mounted) {
+          poseLandmarker.close();
+          return;
+        }
 
         poseLandmarkerRef.current = poseLandmarker;
         setIsLoading(false);
 
         // Initialize webcam
-        if (webcamRef.current) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: { width: 640, height: 480, frameRate: 30 },
-            });
+        navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+          if (webcamRef.current && mounted) {
             webcamRef.current.srcObject = stream;
+            webcamRef.current.play();
             streamRef.current = stream;
-
-            // Wait for video to be ready
-            await new Promise<void>((resolve) => {
-              if (webcamRef.current) {
-                webcamRef.current.onloadedmetadata = () => {
-                  webcamRef.current?.play();
-                  setIsWebcamReady(true);
-                  resolve();
-                };
-              }
-            });
-          } catch (err) {
-            console.error("Error accessing webcam:", err);
+            setIsWebcamReady(true);
           }
-        }
+        });
       } catch (error) {
-        console.error("Error initializing PoseLandmarker:", error);
-        setIsLoading(false);
+        console.error("Initialization error:", error);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-    };
+    }
 
-    initializePoseLandmarker();
+    init();
 
     return () => {
+      mounted = false;
+
       if (animationFrameIdRef.current) {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
@@ -430,7 +427,7 @@ export default function PoseComparison({
             autoPlay
             playsInline
             muted
-            className="hidden"
+            className="w-full hidden aspect-[4/3] border-2 border-green-500 rounded-lg object-contain bg-black"
           />
           <canvas
             ref={webcamCanvasRef}
