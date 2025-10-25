@@ -66,8 +66,8 @@ export function calculateSimilarity(
   const avgDistance = totalDistance / count;
 
   // Convert distance to similarity (0-1, where 1 is identical)
-  // Adjust threshold based on your needs
-  const similarity = Math.max(0, 1 - avgDistance * 5);
+  // Much more lenient - reduced multiplier from 5 to 2
+  const similarity = Math.max(0, 1 - avgDistance * 2);
 
   return similarity;
 }
