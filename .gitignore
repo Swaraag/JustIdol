@@ -43,3 +43,5 @@ next-env.d.ts
 # script
 *-player-script.js
 *-player-script.js.map
+
+public/videos/*
