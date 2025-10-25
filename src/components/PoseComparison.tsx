@@ -185,13 +185,13 @@ export default function PoseComparison({
         const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
             delegate: "GPU",
           },
           runningMode: "VIDEO",
           numPoses: 1,
-          minPoseDetectionConfidence: 0.7,
-          minPosePresenceConfidence: 0.7,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
           minTrackingConfidence: 0.7,
         });
 
@@ -416,7 +416,7 @@ export default function PoseComparison({
             ref={videoCanvasRef}
             width={640}
             height={480}
-            className="w-full aspect-[4/3] border-2 border-blue-500 rounded-lg object-contain bg-black"
+            className="w-full border-2 border-blue-500 rounded-lg bg-black"
           />
         </div>
 
