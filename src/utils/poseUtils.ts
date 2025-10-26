@@ -1,10 +1,35 @@
-// Normalize landmarks to be scale and position invariant
-export function normalizeLandmarks(landmarks: any[]) {
+// ============================================================================
+// SIMPLE BUT EFFECTIVE DANCE SIMILARITY ALGORITHM
+// ============================================================================
+//
+// Design: 3 core components for dance scoring
+// 1. Arm Pose Matching (50%): How well arm angles match
+// 2. Movement Activity (40%): Are you moving when you should?
+// 3. Visibility Check (10%): Is there a person in frame?
+//
+// Key Features:
+// - Returns 0 if no person detected
+// - Heavily penalizes standing still
+// - Uses angles (not just positions) to avoid spatial ambiguity
+// - Simple, fast, effective
+// ============================================================================
+
+export interface Landmark {
+  x: number;
+  y: number;
+  z: number;
+  visibility?: number;
+}
+
+// ============================================================================
+// NORMALIZATION
+// ============================================================================
+
+export function normalizeLandmarks(landmarks: any[]): Landmark[] | null {
   if (!landmarks || landmarks.length === 0) return null;
 
-  // Get bounding box
-  const xs = landmarks.map((l) => l.x);
-  const ys = landmarks.map((l) => l.y);
+  const xs = landmarks.map((l: any) => l.x);
+  const ys = landmarks.map((l: any) => l.y);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
@@ -12,192 +37,159 @@ export function normalizeLandmarks(landmarks: any[]) {
 
   const width = maxX - minX;
   const height = maxY - minY;
-  const scale = Math.max(width, height);
+  const scale = Math.max(width, height, 0.001);
 
-  // Normalize to [0, 1] range centered
-  return landmarks.map((landmark) => ({
+  return landmarks.map((landmark: any) => ({
     x: (landmark.x - minX) / scale,
     y: (landmark.y - minY) / scale,
     z: landmark.z / scale,
-    visibility: landmark.visibility,
+    visibility: landmark.visibility || 1,
   }));
 }
 
-// Calculate similarity between two pose landmarks with weighted scoring
-export function calculateSimilarity(
-  landmarks1: any[] | null,
-  landmarks2: any[] | null,
-): number {
-  if (!landmarks1 || !landmarks2) return 0;
+// ============================================================================
+// POSE DETECTION
+// ============================================================================
 
-  // Define landmarks with weights (higher = more important)
-  // ONLY ARM LANDMARKS - everything else is ignored
-  const landmarkWeights: { [key: number]: number } = {
-    // ARMS ONLY - High weight
-    13: 2.0, // left elbow
-    14: 2.0, // right elbow
-    15: 2.5, // left wrist (even more important - end of limb)
-    16: 2.5, // right wrist
-  };
+function isPoseDetected(landmarks: Landmark[]): boolean {
+  if (!landmarks || landmarks.length === 0) return false;
 
-  let totalWeightedDistance = 0;
-  let totalWeight = 0;
+  // Check key arm points (shoulders, elbows, wrists)
+  const keyPoints = [11, 12, 13, 14, 15, 16];
+  let visibleCount = 0;
 
-  Object.keys(landmarkWeights).forEach((idxStr) => {
-    const idx = parseInt(idxStr);
-    const weight = landmarkWeights[idx];
-
-    if (landmarks1[idx] && landmarks2[idx]) {
-      const dx = landmarks1[idx].x - landmarks2[idx].x;
-      const dy = landmarks1[idx].y - landmarks2[idx].y;
-      const dz = landmarks1[idx].z - landmarks2[idx].z;
-
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-      // Apply weight to this landmark's distance
-      totalWeightedDistance += distance * weight;
-      totalWeight += weight;
+  for (const idx of keyPoints) {
+    if (landmarks[idx] && (landmarks[idx].visibility || 0) > 0.5) {
+      visibleCount++;
     }
-  });
+  }
 
-  if (totalWeight === 0) return 0;
-
-  // Calculate weighted average distance
-  const avgWeightedDistance = totalWeightedDistance / totalWeight;
-
-  // Convert distance to similarity (0-1, where 1 is identical)
-  const similarity = Math.max(0, 1 - avgWeightedDistance * 0.6);
-
-  return similarity;
+  // Need at least 4 out of 6 arm points visible
+  return visibleCount >= 4;
 }
 
-interface BodyAngles {
+// ============================================================================
+// ANGLE CALCULATIONS
+// ============================================================================
+
+function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
+  const radians =
+    Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  let angle = Math.abs((radians * 180.0) / Math.PI);
+  if (angle > 180.0) angle = 360 - angle;
+  return angle;
+}
+
+interface ArmAngles {
   leftElbow: number;
   rightElbow: number;
   leftShoulder: number;
   rightShoulder: number;
 }
 
-// Calculate angle-based similarity
-export function calculateAngleSimilarity(
-  landmarks1: any[] | null,
-  landmarks2: any[] | null,
-): number {
-  if (!landmarks1 || !landmarks2) return 0;
-
-  const angles1 = calculateBodyAngles(landmarks1);
-  const angles2 = calculateBodyAngles(landmarks2);
-
-  let totalDiff = 0;
-  let count = 0;
-
-  for (let key in angles1) {
-    const typedKey = key as keyof BodyAngles;
-    if (angles2[typedKey] !== undefined) {
-      const diff = Math.abs(angles1[typedKey] - angles2[typedKey]);
-      totalDiff += Math.min(diff, 360 - diff); // Handle angle wraparound
-      count++;
-    }
+function getArmAngles(landmarks: Landmark[]): ArmAngles | null {
+  // Check if all required landmarks exist
+  const required = [11, 12, 13, 14, 15, 16, 23, 24];
+  if (!required.every((idx) => landmarks[idx])) {
+    return null;
   }
 
-  if (count === 0) return 0;
-
-  const avgDiff = totalDiff / count;
-  const similarity = Math.max(0, 1 - avgDiff / 180); // Normalize to 0-1
-
-  return similarity;
-}
-
-function calculateBodyAngles(landmarks: any[]): BodyAngles {
   return {
-    // Elbow angles (upper arm to forearm)
     leftElbow: calculateAngle(landmarks[11], landmarks[13], landmarks[15]),
     rightElbow: calculateAngle(landmarks[12], landmarks[14], landmarks[16]),
-    // Shoulder angles (upper arm angle relative to torso)
     leftShoulder: calculateAngle(landmarks[13], landmarks[11], landmarks[23]),
     rightShoulder: calculateAngle(landmarks[14], landmarks[12], landmarks[24]),
   };
 }
 
-function calculateAngle(a: any, b: any, c: any): number {
-  const radians =
-    Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
-  let angle = Math.abs((radians * 180.0) / Math.PI);
+function compareAngles(angles1: ArmAngles, angles2: ArmAngles): number {
+  const leftElbowDiff = Math.abs(angles1.leftElbow - angles2.leftElbow);
+  const rightElbowDiff = Math.abs(angles1.rightElbow - angles2.rightElbow);
+  const leftShoulderDiff = Math.abs(angles1.leftShoulder - angles2.leftShoulder);
+  const rightShoulderDiff = Math.abs(angles1.rightShoulder - angles2.rightShoulder);
 
-  if (angle > 180.0) {
-    angle = 360 - angle;
-  }
+  // Average angular difference
+  const avgDiff = (leftElbowDiff + rightElbowDiff + leftShoulderDiff + rightShoulderDiff) / 4;
 
-  return angle;
+  // Convert to similarity score (0-1, where 0 deg diff = 1.0, 180 deg diff = 0.0)
+  return Math.max(0, 1 - avgDiff / 180);
 }
 
-// Enhanced similarity with movement penalty
+// ============================================================================
+// MOVEMENT DETECTION
+// ============================================================================
+
+function calculateMovementIntensity(
+  currentAngles: ArmAngles,
+  previousAngles: ArmAngles | null
+): number {
+  if (!previousAngles) return 0;
+
+  const leftElbowChange = Math.abs(currentAngles.leftElbow - previousAngles.leftElbow);
+  const rightElbowChange = Math.abs(currentAngles.rightElbow - previousAngles.rightElbow);
+  const leftShoulderChange = Math.abs(currentAngles.leftShoulder - previousAngles.leftShoulder);
+  const rightShoulderChange = Math.abs(currentAngles.rightShoulder - previousAngles.rightShoulder);
+
+  // Average angular velocity (degrees per frame)
+  const avgChange = (leftElbowChange + rightElbowChange + leftShoulderChange + rightShoulderChange) / 4;
+
+  // Normalize: 0-10 degrees/frame maps to 0-1
+  return Math.min(avgChange / 10, 1.0);
+}
+
+// ============================================================================
+// MAIN SCORING FUNCTION
+// ============================================================================
+
 export function calculateSimilarityWithMovement(
   currentLandmarks1: any[] | null,
   previousLandmarks1: any[] | null,
   currentLandmarks2: any[] | null,
   previousLandmarks2: any[] | null,
 ): number {
+  // 1. Check if person is in frame
   if (!currentLandmarks1 || !currentLandmarks2) return 0;
+  if (!isPoseDetected(currentLandmarks1)) return 0;
 
-  // Calculate base pose similarity
-  const poseSimilarity = calculateSimilarity(
-    currentLandmarks1,
-    currentLandmarks2,
-  );
+  // 2. Get arm angles for both user and reference
+  const userAngles = getArmAngles(currentLandmarks1);
+  const refAngles = getArmAngles(currentLandmarks2);
 
-  // If no previous frames, return base similarity
-  if (!previousLandmarks1 || !previousLandmarks2) {
-    return poseSimilarity;
+  if (!userAngles || !refAngles) return 0;
+
+  // 3. Calculate pose similarity (how well angles match)
+  const poseSimilarity = compareAngles(userAngles, refAngles);
+
+  // 4. Calculate movement intensity
+  let userMovement = 0;
+  let refMovement = 0;
+
+  if (previousLandmarks1 && previousLandmarks2) {
+    const prevUserAngles = getArmAngles(previousLandmarks1);
+    const prevRefAngles = getArmAngles(previousLandmarks2);
+
+    if (prevUserAngles && prevRefAngles) {
+      userMovement = calculateMovementIntensity(userAngles, prevUserAngles);
+      refMovement = calculateMovementIntensity(refAngles, prevRefAngles);
+    }
   }
 
-  // Check if reference is moving (arm endpoints only)
-  const limbEndpoints = [13, 14, 15, 16]; // elbows and wrists only
+  // 5. Movement synchrony score
+  const movementDiff = Math.abs(userMovement - refMovement);
+  const movementSynchrony = Math.max(0, 1 - movementDiff);
 
-  let referenceMovementDetected = false;
-  let userMovementDetected = false;
+  // 6. PENALIZE if reference is moving but user is not
+  let finalScore = poseSimilarity * 0.5 + movementSynchrony * 0.5;
 
-  limbEndpoints.forEach((idx) => {
-    if (currentLandmarks2[idx] && previousLandmarks2[idx]) {
-      const refDelta = {
-        x: currentLandmarks2[idx].x - previousLandmarks2[idx].x,
-        y: currentLandmarks2[idx].y - previousLandmarks2[idx].y,
-        z: currentLandmarks2[idx].z - previousLandmarks2[idx].z,
-      };
-      const refSpeed = Math.sqrt(
-        refDelta.x ** 2 + refDelta.y ** 2 + refDelta.z ** 2,
-      );
-
-      if (refSpeed > 0.005) {
-        // Movement threshold
-        referenceMovementDetected = true;
-      }
-    }
-
-    if (currentLandmarks1[idx] && previousLandmarks1[idx]) {
-      const userDelta = {
-        x: currentLandmarks1[idx].x - previousLandmarks1[idx].x,
-        y: currentLandmarks1[idx].y - previousLandmarks1[idx].y,
-        z: currentLandmarks1[idx].z - previousLandmarks1[idx].z,
-      };
-      const userSpeed = Math.sqrt(
-        userDelta.x ** 2 + userDelta.y ** 2 + userDelta.z ** 2,
-      );
-
-      if (userSpeed > 0.005) {
-        // Movement threshold
-        userMovementDetected = true;
-      }
-    }
-  });
-
-  // Apply penalty if reference is moving but user is not
-  let finalScore = poseSimilarity;
-
-  if (referenceMovementDetected && !userMovementDetected) {
-    // EXTREME PENALTY: User is frozen when they should be moving
-    finalScore *= 0.05; // Reduce score by 95%!
+  if (refMovement > 0.15 && userMovement < 0.05) {
+    // Reference is dancing, user is frozen
+    finalScore *= 0.2; // 80% penalty
   }
 
-  return finalScore;
+  // 7. PENALIZE if user is barely moving at all
+  if (userMovement < 0.05) {
+    finalScore *= 0.3; // 70% penalty for being too static
+  }
+
+  return Math.max(0, Math.min(1, finalScore));
 }

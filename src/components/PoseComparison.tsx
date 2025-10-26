@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
-import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
+import { calculateSimilarityWithMovement, normalizeLandmarks } from "../utils/poseUtils";
 import { KaraokeScoringHookResult } from "../hooks/useKaraokeScoring.ts";
 import AudioVisualizer from "./karaoke/AudioVisualizer.tsx";
 
@@ -98,6 +98,8 @@ export default function PoseComparison({
   const videoAnimationFrameIdRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const referenceLandmarksRef = useRef<any[] | null>(null);
+  const previousWebcamLandmarksRef = useRef<any[] | null>(null);
+  const previousReferenceLandmarksRef = useRef<any[] | null>(null);
   const lastWebcamTimeRef = useRef<number>(-1);
   const lastVideoTimeRef = useRef<number>(-1);
 
@@ -218,9 +220,9 @@ export default function PoseComparison({
           },
           runningMode: "VIDEO",
           numPoses: 1,
-          minPoseDetectionConfidence: 0.7,
-          minPosePresenceConfidence: 0.7,
-          minTrackingConfidence: 0.7,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
         });
 
         if (!mounted) {
@@ -369,8 +371,9 @@ export default function PoseComparison({
   }, [similarity, karaoke.zoneScore, isStarted]);
 
   useEffect(() => {
-    if (!isStarted) return;
-    console.log("useEffect Started");
+    // Wait for countdown to finish before starting video/processing
+    if (!isStarted || countdown !== null) return;
+    console.log("useEffect Started - Countdown finished");
     let shouldContinue = true;
     setIsVideoPlaying(false);
 
@@ -444,11 +447,27 @@ export default function PoseComparison({
                 const normalized2 = normalizeLandmarks(
                   referenceLandmarksRef.current
                 );
-                const score = calculateSimilarity(normalized1, normalized2);
+                const previousNormalized1 = previousWebcamLandmarksRef.current
+                  ? normalizeLandmarks(previousWebcamLandmarksRef.current)
+                  : null;
+                const previousNormalized2 = previousReferenceLandmarksRef.current
+                  ? normalizeLandmarks(previousReferenceLandmarksRef.current)
+                  : null;
+
+                // Use movement-based similarity calculation
+                const score = calculateSimilarityWithMovement(
+                  normalized1,
+                  previousNormalized1,
+                  normalized2,
+                  previousNormalized2
+                );
                 setSimilarity(score);
 
                 // Track score for final average
                 scoreHistoryRef.current.push(score);
+
+                // Store current landmarks as previous for next frame
+                previousWebcamLandmarksRef.current = landmarks;
               }
             }
 
@@ -506,6 +525,9 @@ export default function PoseComparison({
               );
 
               drawPoseLandmarks(ctx, landmarks, "#df0043ff", "#800080");
+
+              // Store previous reference landmarks before updating current
+              previousReferenceLandmarksRef.current = referenceLandmarksRef.current;
               referenceLandmarksRef.current = landmarks;
             }
 
@@ -667,6 +689,8 @@ export default function PoseComparison({
       lastVideoTimeRef.current = -1;
       webcamLandmarksBufferRef.current = [];
       videoLandmarksBufferRef.current = [];
+      previousWebcamLandmarksRef.current = null;
+      previousReferenceLandmarksRef.current = null;
     };
   }, [isStarted, countdown, drawPoseLandmarks, smoothLandmarks]);
 
@@ -674,6 +698,8 @@ export default function PoseComparison({
     setIsStarted(false);
     setSimilarity(0);
     referenceLandmarksRef.current = null;
+    previousWebcamLandmarksRef.current = null;
+    previousReferenceLandmarksRef.current = null;
     karaoke.stopRecording();
   }, [karaoke]);
 
@@ -691,6 +717,8 @@ export default function PoseComparison({
     scoreHistoryRef.current = [];
     finalZoneScoreRef.current = null;
     referenceLandmarksRef.current = null;
+    previousWebcamLandmarksRef.current = null;
+    previousReferenceLandmarksRef.current = null;
     karaoke.reset();
 
     // Restart after a brief delay to ensure cleanup
