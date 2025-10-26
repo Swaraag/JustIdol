@@ -75,21 +75,12 @@ function App() {
         <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-25 animate-pulse" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
         
-        {/* Large Moon in Background - Top Right */}
-        <div className="absolute -top-0 left-30 opacity-10 animate-pulse" style={{ animationDuration: '6s' }}>
-          <img 
-            src="/images/honmoon.png" 
-            alt="" 
-            className="w-[1200px] h-[1200px] object-contain"
-          />
-        </div>
-
         {/* Fading K-pop Demon Hunter Characters */}
-        <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
+        <div className="absolute py-4 top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
           <img 
             src="/images/demon.png" 
             alt="" 
-            className="w-280 h-200 object-contain"
+            className="w-280 h-180 object-contain"
           />
         </div>
         {/*
@@ -125,17 +116,17 @@ function App() {
             <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 blur-3xl opacity-50 animate-pulse"></div>
             
             <div className="relative">
-              <h1 className="text-8xl font-black mb-2 relative">
+              <h1 className="text-8xl text-wrap w-160 font-black mb-2 relative">
                 <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
-                  JUST IDOL
+                  K-Pop Demon Hunters
                 </span>
                 <span className="relative text-transparent bg-clip-text bg-gradient-to-b from-red-100 via-purple-4900 to-pink-400">
-                  JUST IDOL
+                  K-Pop Demon Hunters
                 </span>
               </h1>
               <div className="flex items-center justify-center gap-3 text-2xl font-bold">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-purple-300 tracking-widest">
-                  DEMON HUNTER ACADEMY
+                  Just Idol
                 </span>
               </div>
             </div>
