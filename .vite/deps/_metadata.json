@@ -1,0 +1,49 @@
+{
+  "hash": "7f4cfd6a",
+  "configHash": "98a40f91",
+  "lockfileHash": "87155dc3",
+  "browserHash": "4aed272b",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "5a21fbce",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "961a441c",
+      "needsInterop": true
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "17c3d1bc",
+      "needsInterop": false
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/.pnpm/react@19.2.0/node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "9e1de76d",
+      "needsInterop": true
+    },
+    "@mediapipe/tasks-vision": {
+      "src": "../../node_modules/.pnpm/@mediapipe+tasks-vision@0.10.22-rc.20250304/node_modules/@mediapipe/tasks-vision/vision_bundle.mjs",
+      "file": "@mediapipe_tasks-vision.js",
+      "fileHash": "f728b4ec",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-KW474OA3": {
+      "file": "chunk-KW474OA3.js"
+    },
+    "chunk-LKDWOGFZ": {
+      "file": "chunk-LKDWOGFZ.js"
+    },
+    "chunk-G3PMV62Z": {
+      "file": "chunk-G3PMV62Z.js"
+    }
+  }
+}
