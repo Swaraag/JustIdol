@@ -21,9 +21,9 @@ function App() {
 
   // Difficulty video paths - UPDATE THESE WITH YOUR ACTUAL VIDEO FILES
   const difficultyVideos = {
-    easy: "public/videos/easy-dance.mp4",
-    medium: "public/videos/medium-dance.mp4",
-    hard: "public/videos/hard-dance.mp4",
+    easy: "/videos/easy-dance.mp4",
+    medium: "/videos/medium-dance.mp4",
+    hard: "/videos/hard-dance.mp4",
   };
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {

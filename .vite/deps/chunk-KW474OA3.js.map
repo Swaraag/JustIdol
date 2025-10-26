@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../node_modules/.pnpm/react@19.2.0/node_modules/react/index.js"],
+  "sourcesContent": ["'use strict';\n\nif (process.env.NODE_ENV === 'production') {\n  module.exports = require('./cjs/react.production.js');\n} else {\n  module.exports = require('./cjs/react.development.js');\n}\n"],
+  "mappings": ";;;;;;;;AAAA;AAAA;AAAA;AAEA,QAAI,OAAuC;AACzC,aAAO,UAAU;AAAA,IACnB,OAAO;AACL,aAAO,UAAU;AAAA,IACnB;AAAA;AAAA;",
+  "names": []
+}

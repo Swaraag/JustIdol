@@ -2,7 +2,6 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
 import { KaraokeScoringHookResult } from "../hooks/useKaraokeScoring.ts";
-import ZoneScoreDisplay from "./karaoke/ZoneScoreDisplay.tsx";
 
 interface PoseComparisonProps {
   referenceVideoUrl: string;
@@ -306,12 +305,10 @@ export default function PoseComparison({
   }, [similarity, karaoke.zoneScore, isStarted]);
 
   useEffect(() => {
-
-  console.log("🎯 useEffect triggered because these dependencies changed:", changed);
     if (!isStarted) return;
     console.log("useEffect Started");
     let shouldContinue = true;
-    //setIsVideoPlaying(false);
+    setIsVideoPlaying(false);
 
     // Start karaoke recording when dance starts
     const startKaraoke = async () => {
@@ -476,6 +473,7 @@ export default function PoseComparison({
         handleLoadedMetadata();
       }
 
+      // Only reset and play if video is paused
       video.currentTime = 0;
       video.play().catch((err) => {
         console.error("Error playing video:", err);
@@ -499,7 +497,7 @@ export default function PoseComparison({
       }
 
       // Reset video playing state
-      //setIsVideoPlaying(false);
+      setIsVideoPlaying(false);
 
       // Reset time refs and smoothing buffers
       lastWebcamTimeRef.current = -1;
@@ -507,13 +505,8 @@ export default function PoseComparison({
       webcamLandmarksBufferRef.current = [];
       videoLandmarksBufferRef.current = [];
     };
-  }, [
-    isStarted,
-    drawPoseLandmarks,
-    smoothLandmarks,
-    karaoke,
-    selectedMicrophone,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStarted]);
 
   const handleStop = useCallback(() => {
     setIsStarted(false);
