@@ -1,10 +1,14 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
+import { KaraokeScoringHookResult } from "../hooks/useKaraokeScoring.ts";
+import ZoneScoreDisplay from "./karaoke/ZoneScoreDisplay.tsx";
 
 interface PoseComparisonProps {
   referenceVideoUrl: string;
   onChangeVideo: () => void;
+  karaoke: KaraokeScoringHookResult;
+  selectedMicrophone: string;
 }
 
 // Pose connections for drawing skeleton (body only, no face/hand details)
@@ -53,6 +57,8 @@ const LANDMARKS_TO_DRAW = new Set([
 export default function PoseComparison({
   referenceVideoUrl,
   onChangeVideo,
+  karaoke,
+  selectedMicrophone,
 }: PoseComparisonProps) {
   const webcamRef = useRef<HTMLVideoElement>(null);
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,6 +72,7 @@ export default function PoseComparison({
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [combinedScore, setCombinedScore] = useState(0);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 640,
     height: 480,
@@ -130,7 +137,7 @@ export default function PoseComparison({
 
       return smoothed;
     },
-    [SMOOTHING_FRAMES],
+    [SMOOTHING_FRAMES]
   );
 
   // Memoized drawing function - only draws body landmarks
@@ -139,7 +146,7 @@ export default function PoseComparison({
       ctx: CanvasRenderingContext2D,
       landmarks: any[],
       connectionColor: string,
-      landmarkColor: string,
+      landmarkColor: string
     ) => {
       const canvasWidth = ctx.canvas.width;
       const canvasHeight = ctx.canvas.height;
@@ -157,7 +164,7 @@ export default function PoseComparison({
         if (startLandmark && endLandmark) {
           ctx.moveTo(
             startLandmark.x * canvasWidth,
-            startLandmark.y * canvasHeight,
+            startLandmark.y * canvasHeight
           );
           ctx.lineTo(endLandmark.x * canvasWidth, endLandmark.y * canvasHeight);
         }
@@ -178,13 +185,13 @@ export default function PoseComparison({
             landmark.y * canvasHeight,
             5,
             0,
-            2 * Math.PI,
+            2 * Math.PI
           );
           ctx.fill();
         }
       }
     },
-    [],
+    []
   );
 
   useEffect(() => {
@@ -264,11 +271,61 @@ export default function PoseComparison({
     };
   }, []);
 
+  // Connect video audio when video ref is ready
   useEffect(() => {
-    if (!isStarted) return;
+    if (videoRef.current && referenceVideoUrl) {
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          karaoke
+            .connectVideo(videoRef.current)
+            .then(() => console.log("Video audio connected for karaoke!"))
+            .catch((err) =>
+              console.error("Failed to connect video audio:", err)
+            );
+        }
+      }, 500);
 
+      return () => clearTimeout(timer);
+    }
+
+    return () => {
+      karaoke.disconnectVideo();
+    };
+  }, [referenceVideoUrl, karaoke]);
+
+  // Calculate combined score (dance + vocal)
+  useEffect(() => {
+    if (karaoke.zoneScore && isStarted) {
+      const danceScore = similarity * 100;
+      const vocalScore = karaoke.zoneScore.totalScore;
+
+      // 50/50 split
+      const combined = Math.round((danceScore + vocalScore) / 2);
+      setCombinedScore(combined);
+    }
+  }, [similarity, karaoke.zoneScore, isStarted]);
+
+  useEffect(() => {
+
+  console.log("🎯 useEffect triggered because these dependencies changed:", changed);
+    if (!isStarted) return;
+    console.log("useEffect Started");
     let shouldContinue = true;
-    setIsVideoPlaying(false);
+    //setIsVideoPlaying(false);
+
+    // Start karaoke recording when dance starts
+    const startKaraoke = async () => {
+      if (selectedMicrophone) {
+        try {
+          await karaoke.startRecording(selectedMicrophone);
+          console.log("Karaoke recording started!");
+        } catch (error) {
+          console.error("Failed to start karaoke recording:", error);
+        }
+      }
+    };
+
+    startKaraoke();
 
     const processWebcamFrame = () => {
       if (!shouldContinue) return;
@@ -301,7 +358,7 @@ export default function PoseComparison({
               // Apply temporal smoothing
               const landmarks = smoothLandmarks(
                 rawLandmarks,
-                webcamLandmarksBufferRef.current,
+                webcamLandmarksBufferRef.current
               );
 
               drawPoseLandmarks(ctx, landmarks, "#00FF00", "#FF0000");
@@ -310,7 +367,7 @@ export default function PoseComparison({
               if (referenceLandmarksRef.current) {
                 const normalized1 = normalizeLandmarks(landmarks);
                 const normalized2 = normalizeLandmarks(
-                  referenceLandmarksRef.current,
+                  referenceLandmarksRef.current
                 );
                 const score = calculateSimilarity(normalized1, normalized2);
                 setSimilarity(score);
@@ -370,7 +427,7 @@ export default function PoseComparison({
               // Apply temporal smoothing
               const landmarks = smoothLandmarks(
                 rawLandmarks,
-                videoLandmarksBufferRef.current,
+                videoLandmarksBufferRef.current
               );
 
               drawPoseLandmarks(ctx, landmarks, "#0000FF", "#FFFF00");
@@ -431,6 +488,9 @@ export default function PoseComparison({
     return () => {
       shouldContinue = false;
 
+      // Stop karaoke recording when dance stops
+      karaoke.stopRecording();
+
       // Pause the reference video when stopped
       if (videoRef.current) {
         const video = videoRef.current;
@@ -439,7 +499,7 @@ export default function PoseComparison({
       }
 
       // Reset video playing state
-      setIsVideoPlaying(false);
+      //setIsVideoPlaying(false);
 
       // Reset time refs and smoothing buffers
       lastWebcamTimeRef.current = -1;
@@ -447,13 +507,20 @@ export default function PoseComparison({
       webcamLandmarksBufferRef.current = [];
       videoLandmarksBufferRef.current = [];
     };
-  }, [isStarted, drawPoseLandmarks, smoothLandmarks]);
+  }, [
+    isStarted,
+    drawPoseLandmarks,
+    smoothLandmarks,
+    karaoke,
+    selectedMicrophone,
+  ]);
 
   const handleStop = useCallback(() => {
     setIsStarted(false);
     setSimilarity(0);
     referenceLandmarksRef.current = null;
-  }, []);
+    karaoke.stopRecording();
+  }, [karaoke]);
 
   const handleRetry = useCallback(() => {
     // Reset all state
@@ -462,14 +529,16 @@ export default function PoseComparison({
     setIsVideoPlaying(false);
     setSimilarity(0);
     setFinalScore(0);
+    setCombinedScore(0);
     scoreHistoryRef.current = [];
     referenceLandmarksRef.current = null;
+    karaoke.reset();
 
     // Restart after a brief delay to ensure cleanup
     setTimeout(() => {
       setIsStarted(true);
     }, 100);
-  }, []);
+  }, [karaoke]);
 
   if (isLoading) {
     return (
@@ -479,18 +548,33 @@ export default function PoseComparison({
             {/* Demon hunter summoning circle */}
             <div className="absolute inset-0 border-4 border-red-600/30 rounded-full"></div>
             <div className="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-purple-500 rounded-full animate-spin"></div>
-            <div className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-            <div className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
+            <div
+              className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin"
+              style={{
+                animationDirection: "reverse",
+                animationDuration: "1.5s",
+              }}
+            ></div>
+            <div
+              className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin"
+              style={{ animationDuration: "1s" }}
+            ></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <svg className="w-12 h-12 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              <svg
+                className="w-12 h-12 text-red-400"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
               </svg>
             </div>
           </div>
           <p className="text-3xl text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400 font-black mb-2">
             SUMMONING DEMON HUNTER
           </p>
-          <p className="text-red-300/70 font-medium">Loading pose detection magic...</p>
+          <p className="text-red-300/70 font-medium">
+            Loading pose detection magic...
+          </p>
         </div>
       </div>
     );
@@ -502,18 +586,26 @@ export default function PoseComparison({
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-black to-purple-950/50"></div>
         {/* Mystical demon energy particles */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDuration: '3s' }}></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '4s' }}></div>
-        
+        <div
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse"
+          style={{ animationDuration: "3s" }}
+        ></div>
+        <div
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse"
+          style={{ animationDelay: "1.5s", animationDuration: "4s" }}
+        ></div>
+
         {/* Fading K-pop performer silhouettes */}
-        <div className="absolute top-28 left-265 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
-          <img 
-            src="/images/demon-hunter.png" 
-            alt="" 
+        <div
+          className="absolute top-28 left-265 opacity-15 animate-pulse"
+          style={{ animationDuration: "4s" }}
+        >
+          <img
+            src="/images/demon-hunter.png"
+            alt=""
             className="w-140 h-100 object-contain"
           />
         </div>
-
       </div>
 
       {/* Fullscreen Reference Video */}
@@ -539,14 +631,20 @@ export default function PoseComparison({
         <div className="relative group">
           {/* Demon energy aura around webcam */}
           <div className="absolute -inset-2 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
-          
+
           <div className="relative">
             {/* Mystical frame indicators */}
             <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-transparent via-red-400 to-transparent"></div>
             <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
-            
+
             <div className="relative bg-gradient-to-br from-gray-950 to-red-950 rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-2xl shadow-red-500/50">
-              <video ref={webcamRef} autoPlay playsInline muted className="hidden" />
+              <video
+                ref={webcamRef}
+                autoPlay
+                playsInline
+                muted
+                className="hidden"
+              />
               <canvas
                 ref={webcamCanvasRef}
                 width={webcamDimensions.width}
@@ -558,7 +656,9 @@ export default function PoseComparison({
                 <div className="absolute inset-0 bg-black/90 flex items-center justify-center">
                   <div className="text-center text-white">
                     <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-400 mb-2"></div>
-                    <p className="text-sm font-bold text-red-300">Activating Hunter Vision...</p>
+                    <p className="text-sm font-bold text-red-300">
+                      Activating Hunter Vision...
+                    </p>
                   </div>
                 </div>
               )}
@@ -578,8 +678,18 @@ export default function PoseComparison({
           className="group relative px-6 py-3 rounded-xl bg-black/80 backdrop-blur-sm border-2 border-red-700/50 text-red-200 font-black hover:bg-red-950/50 hover:border-red-500 transition-all duration-300 shadow-lg hover:shadow-red-500/50 hover:scale-105"
         >
           <span className="flex items-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
             </svg>
             RETREAT
           </span>
@@ -598,8 +708,12 @@ export default function PoseComparison({
             <span className="flex items-center gap-3">
               {isWebcamReady ? (
                 <>
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
+                  <svg
+                    className="w-6 h-6"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
                   </svg>
                   <span>START HUNT</span>
                 </>
@@ -634,18 +748,33 @@ export default function PoseComparison({
               {/* Demon hunter summoning circle animation */}
               <div className="absolute inset-0 border-4 border-red-600/30 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-purple-500 rounded-full animate-spin"></div>
-              <div className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-              <div className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
+              <div
+                className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin"
+                style={{
+                  animationDirection: "reverse",
+                  animationDuration: "1.5s",
+                }}
+              ></div>
+              <div
+                className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin"
+                style={{ animationDuration: "1s" }}
+              ></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <svg className="w-16 h-16 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                <svg
+                  className="w-16 h-16 text-red-400"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
                 </svg>
               </div>
             </div>
             <p className="text-3xl text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400 font-black">
               INITIALIZING BATTLE
             </p>
-            <p className="text-red-300/70 mt-2 font-medium">Prepare yourself, Hunter...</p>
+            <p className="text-red-300/70 mt-2 font-medium">
+              Prepare yourself, Hunter...
+            </p>
           </div>
         </div>
       )}
@@ -654,46 +783,87 @@ export default function PoseComparison({
       {isStarted && isVideoPlaying && !isFinished && (
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
           <div className="relative group">
-            {/* Demon energy glow around score */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
-            
+
             <div className="relative bg-black/90 backdrop-blur-md px-10 py-6 rounded-2xl border-2 border-red-500/50 shadow-2xl">
-              {/* Hunter rank indicator */}
+              {/* Combined Score */}
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-600 to-purple-600 px-4 py-1 rounded-full border-2 border-red-400/50">
-                <p className="text-xs font-black text-white">SYNC RATE</p>
+                <p className="text-xs font-black text-white">TOTAL SYNC RATE</p>
               </div>
-              
+
               <h2 className="text-6xl font-black mb-3 text-center relative">
                 <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm animate-pulse">
-                  {(similarity * 100).toFixed(1)}%
+                  {combinedScore}%
                 </span>
                 <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
-                  {(similarity * 100).toFixed(1)}%
+                  {combinedScore}%
                 </span>
               </h2>
-              
-              {/* Demon hunter power bar */}
+
+              {/* Individual Scores */}
+              <div className="flex justify-center gap-6 mb-4">
+                <div className="text-center">
+                  <p className="text-xs text-purple-300 font-bold mb-1">
+                    DANCE
+                  </p>
+                  <p className="text-2xl font-black text-purple-400">
+                    {(similarity * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div className="w-px bg-red-500/30"></div>
+                <div className="text-center">
+                  <p className="text-xs text-pink-300 font-bold mb-1">VOCAL</p>
+                  <p className="text-2xl font-black text-pink-400">
+                    {karaoke.zoneScore ? karaoke.zoneScore.totalScore : 0}%
+                  </p>
+                </div>
+              </div>
+
+              {/* Power bar */}
               <div className="relative w-80 h-5 bg-gray-900 rounded-full overflow-hidden shadow-inner border border-red-900/50">
                 <div
                   className={`h-full transition-all duration-300 rounded-full relative ${
-                    similarity > 0.8
+                    combinedScore > 80
                       ? "bg-gradient-to-r from-red-500 via-pink-500 to-red-500 shadow-lg shadow-red-500/50"
-                      : similarity > 0.6
-                        ? "bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-lg shadow-purple-500/50"
-                        : "bg-gradient-to-r from-gray-600 via-red-600 to-gray-600 shadow-lg shadow-red-500/30"
+                      : combinedScore > 60
+                      ? "bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-lg shadow-purple-500/50"
+                      : "bg-gradient-to-r from-gray-600 via-red-600 to-gray-600 shadow-lg shadow-red-500/30"
                   }`}
-                  style={{ width: `${similarity * 100}%` }}
+                  style={{ width: `${combinedScore}%` }}
                 >
-                  {/* Energy flow animation */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
                 </div>
               </div>
-              
+
               <div className="flex justify-between mt-2 text-xs font-black">
                 <span className="text-red-400">TRAINEE</span>
                 <span className="text-purple-400">A-RANK</span>
                 <span className="text-pink-400">S-RANK</span>
               </div>
+
+              {/* Pitch Display */}
+              {karaoke.isRecording && (
+                <div className="mt-4 pt-4 border-t border-red-500/30">
+                  <div className="flex justify-center gap-4 text-sm">
+                    <div className="text-center">
+                      <p className="text-xs text-green-300 font-bold mb-1">
+                        YOUR NOTE
+                      </p>
+                      <p className="text-lg font-black text-green-400">
+                        {karaoke.userNote}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-blue-300 font-bold mb-1">
+                        TARGET
+                      </p>
+                      <p className="text-lg font-black text-blue-400">
+                        {karaoke.targetNote}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -704,20 +874,26 @@ export default function PoseComparison({
         <div className="absolute inset-0 bg-gradient-to-br from-black via-red-950/95 to-purple-950/95 backdrop-blur-xl flex items-center justify-center z-30">
           {/* Background character images */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
-          <img 
-            src="/images/demon.png" 
-            alt="" 
-            className="w-280 h-200 object-contain"
-          />
-        </div>
-            <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
-          <img 
-            src="/images/demon.png" 
-            alt="" 
-            className="w-280 h-200 object-contain"
-          />
-        </div>
+            <div
+              className="absolute top-0 left-80 opacity-15 animate-pulse"
+              style={{ animationDuration: "4s" }}
+            >
+              <img
+                src="/images/demon.png"
+                alt=""
+                className="w-280 h-200 object-contain"
+              />
+            </div>
+            <div
+              className="absolute top-0 right-80 opacity-15 animate-pulse"
+              style={{ animationDuration: "4s", animationDelay: "2s" }}
+            >
+              <img
+                src="/images/demon.png"
+                alt=""
+                className="w-280 h-200 object-contain transform scale-x-[-1]"
+              />
+            </div>
           </div>
 
           <div className="text-center max-w-4xl px-8 relative z-10">
@@ -726,7 +902,7 @@ export default function PoseComparison({
               <div className="relative inline-block mb-6">
                 {/* Epic glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-3xl opacity-60 animate-pulse"></div>
-                
+
                 <h1 className="relative text-8xl font-black mb-4">
                   <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
                     HUNT COMPLETE
@@ -736,116 +912,178 @@ export default function PoseComparison({
                   </span>
                 </h1>
               </div>
-              
-              {/* Rank badge */}
+
+              {/* Combined Final Score Badge */}
               <div className="relative inline-block mb-6">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-pink-600 rounded-3xl blur-2xl opacity-50 animate-pulse"></div>
                 <div className="relative bg-gradient-to-br from-gray-900 via-red-950 to-purple-950 border-4 border-red-500/50 rounded-3xl px-16 py-10 shadow-2xl">
                   {/* Rank icon */}
                   <div className="mb-4">
-                    {finalScore > 0.8 ? (
-                      <svg className="w-24 h-24 mx-auto text-red-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    {combinedScore > 80 ? (
+                      <svg
+                        className="w-24 h-24 mx-auto text-red-400"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
-                    ) : finalScore > 0.6 ? (
-                      <svg className="w-24 h-24 mx-auto text-purple-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                    ) : combinedScore > 60 ? (
+                      <svg
+                        className="w-24 h-24 mx-auto text-purple-400"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
                       </svg>
                     ) : (
-                      <svg className="w-24 h-24 mx-auto text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      <svg
+                        className="w-24 h-24 mx-auto text-gray-400"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                       </svg>
                     )}
                   </div>
+
+                  {/* Combined Score */}
                   <div className="text-9xl font-black mb-2">
-                    <span className={`bg-gradient-to-r ${
-                      finalScore > 0.8
-                        ? "from-red-400 via-pink-400 to-red-400"
-                        : finalScore > 0.6
+                    <span
+                      className={`bg-gradient-to-r ${
+                        combinedScore > 80
+                          ? "from-red-400 via-pink-400 to-red-400"
+                          : combinedScore > 60
                           ? "from-purple-400 via-pink-400 to-purple-400"
                           : "from-gray-400 via-red-400 to-gray-400"
-                    } bg-clip-text text-transparent`}>
-                      {(finalScore * 100).toFixed(1)}%
+                      } bg-clip-text text-transparent`}
+                    >
+                      {combinedScore}%
                     </span>
                   </div>
-                  <div className={`text-3xl font-black ${
-                    finalScore > 0.8
-                      ? "text-red-400"
-                      : finalScore > 0.6
+
+                  {/* Individual Scores Breakdown */}
+                  <div className="flex justify-center gap-8 mb-4">
+                    <div className="text-center">
+                      <p className="text-sm text-purple-300 font-bold mb-1">
+                        DANCE
+                      </p>
+                      <p className="text-3xl font-black text-purple-400">
+                        {(finalScore * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="text-4xl text-red-500/50">+</div>
+                    <div className="text-center">
+                      <p className="text-sm text-pink-300 font-bold mb-1">
+                        VOCAL
+                      </p>
+                      <p className="text-3xl font-black text-pink-400">
+                        {karaoke.zoneScore ? karaoke.zoneScore.totalScore : 0}%
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`text-3xl font-black ${
+                      combinedScore > 80
+                        ? "text-red-400"
+                        : combinedScore > 60
                         ? "text-purple-400"
                         : "text-gray-400"
-                  }`}>
-                    {finalScore > 0.8
+                    }`}
+                  >
+                    {combinedScore > 80
                       ? "S-RANK HUNTER"
-                      : finalScore > 0.6
-                        ? "A-RANK HUNTER"
-                        : "TRAINEE HUNTER"}
+                      : combinedScore > 60
+                      ? "A-RANK HUNTER"
+                      : "TRAINEE HUNTER"}
                   </div>
                 </div>
               </div>
 
               <p className="text-4xl text-white font-black mb-3">
-                {finalScore > 0.8
+                {combinedScore > 80
                   ? "LEGENDARY PERFORMANCE!"
-                  : finalScore > 0.6
-                    ? "EXCELLENT TECHNIQUE!"
-                    : "KEEP TRAINING!"}
+                  : combinedScore > 60
+                  ? "EXCELLENT TECHNIQUE!"
+                  : "KEEP TRAINING!"}
               </p>
 
               <p className="text-xl text-red-200/80 mb-8 max-w-2xl mx-auto">
-                {finalScore > 0.8
-                  ? "You've mastered the demon hunter dance! Your movements are flawless and your technique is legendary!"
-                  : finalScore > 0.6
-                    ? "Strong performance, Hunter! A few more training sessions and you'll reach S-Rank!"
-                    : "Every legend starts somewhere! Keep training and you'll become a master demon hunter!"}
+                {combinedScore > 80
+                  ? "You've mastered both dance and vocals! Your movements are flawless and your voice is divine!"
+                  : combinedScore > 60
+                  ? "Strong performance, Hunter! A few more training sessions and you'll reach S-Rank!"
+                  : "Every legend starts somewhere! Keep training and you'll become a master demon hunter!"}
               </p>
             </div>
 
             {/* Action buttons with demon hunter styling */}
             <div className="flex gap-6 justify-center">
-              <button
-                onClick={handleRetry}
-                className="group relative"
-              >
+              <button onClick={handleRetry} className="group relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
                 <div className="relative px-12 py-5 rounded-xl bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 text-white font-black text-2xl hover:from-red-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 border-2 border-red-400/50">
                   <span className="flex items-center gap-3">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-7 h-7"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     <span>RETRY HUNT</span>
                   </span>
                 </div>
               </button>
 
-              <button
-                onClick={onChangeVideo}
-                className="group relative"
-              >
+              <button onClick={onChangeVideo} className="group relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
                 <div className="relative px-12 py-5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-black text-2xl hover:from-purple-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 border-2 border-purple-400/50">
                   <span className="flex items-center gap-3">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    <svg
+                      className="w-7 h-7"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
                     </svg>
                     <span>NEW MISSION</span>
                   </span>
                 </div>
               </button>
             </div>
-            
+
             {/* Achievement unlocked message for S-Rank */}
-            {finalScore > 0.8 && (
+            {combinedScore > 80 && (
               <div className="mt-8 inline-block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur opacity-75 animate-pulse"></div>
                   <div className="relative bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black px-6 py-3 rounded-xl border-2 border-yellow-300 flex items-center gap-3">
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    <svg
+                      className="w-6 h-6"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                     </svg>
                     <span>ACHIEVEMENT UNLOCKED: DEMON SLAYER</span>
-                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    <svg
+                      className="w-6 h-6"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                     </svg>
                   </div>
                 </div>
