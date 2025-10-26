@@ -10,6 +10,7 @@ function App() {
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [showDifficultySelector, setShowDifficultySelector] = useState(false);
   const [selectedMode, setSelectedMode] = useState<GameMode>(null);
+  const [showMissionSelect, setShowMissionSelect] = useState<boolean>(false);
 
   // Difficulty video paths - UPDATE THESE WITH YOUR ACTUAL VIDEO FILES
   const difficultyVideos = {
@@ -17,7 +18,7 @@ function App() {
     medium: 'public/videos/medium-dance.mp4',
     hard: 'public/videos/hard-dance.mp4'
   };
-
+ 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type.startsWith("video/")) {
@@ -116,9 +117,9 @@ function App() {
       
       */}
 </div>
-      <div className="container mx-auto py-12 px-4 relative z-10">
+      <div className="min-h-screen container mx-auto px-4 relative z-10 flex flex-col items-center justify-center">
         {/* Header - K-pop Demon Hunter Style */}
-        <div className="text-center mb-12">
+        { ! showMissionSelect && <div className="text-center mb-12">
           <div className="inline-block mb-4 relative">
             {/* Glowing aura behind title */}
             <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 blur-3xl opacity-50 animate-pulse"></div>
@@ -142,10 +143,10 @@ function App() {
           <p className="text-xl text-red-200/80 max-w-2xl mx-auto font-medium">
             Train like a K-pop demon hunter! Master the choreography and banish bad moves to the shadow realm!
           </p>
-        </div>
+        </div>}
 
-        {!videoUrl ? (
-          <div className="max-w-4xl mx-auto">
+        {!videoUrl ? showMissionSelect ?  (
+          <div className="max-w-4xl mx-auto ">
             {/* Upload Section - Dark Energy Portal */}
             <div className="relative group mb-8">
               {/* Outer glow - demon energy */}
@@ -233,46 +234,25 @@ function App() {
               </div>
             </div>
 
-            {/* Instructions - Demon Hunter Training Manual */}
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl blur opacity-50 group-hover:opacity-75 transition duration-500"></div>
-              <div className="relative bg-gradient-to-br from-gray-950 via-purple-950/50 to-pink-950/50 backdrop-blur-xl p-8 rounded-3xl border border-red-900/50">
-                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-pink-300 mb-6">
-                  DEMON HUNTER TRAINING PROTOCOL
-                </h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {[
-                    { step: "STEP 1", title: "SUMMON", text: "Upload your training choreography video" },
-                    { step: "STEP 2", title: "REVEAL", text: "Allow camera access to track your movements" },
-                    { step: "STEP 3", title: "POSITION", text: "Stand in full view like a true demon hunter" },
-                    { step: "STEP 4", title: "ENGAGE", text: "Click 'Start Hunt' to begin your training" },
-                    { step: "STEP 5", title: "EXECUTE", text: "Match the choreography with precision" },
-                    { step: "STEP 6", title: "RANK UP", text: "Achieve high scores to level up your hunter rank!" }
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-start gap-3 p-5 rounded-xl bg-black/50 hover:bg-red-950/30 transition-all duration-300 border border-red-900/30 hover:border-red-500/50 group/item">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-red-500 to-purple-500 flex items-center justify-center text-white text-sm font-black">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <p className="text-red-300 font-black text-sm mb-1">{item.title}</p>
-                        <p className="text-red-200/70 text-sm">{item.text}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Demon Hunter Ranks */}
-                <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-red-950/50 to-purple-950/50 border border-red-700/30">
-                  <p className="text-center text-red-300 font-bold mb-2">HUNTER RANKS</p>
-                  <div className="flex justify-center gap-6 text-sm">
-                    <span className="text-pink-400 font-bold">&lt;60% = TRAINEE HUNTER</span>
-                    <span className="text-purple-400 font-bold">60%+ = A-RANK HUNTER</span>
-                    <span className="text-red-400 font-bold">80%+ = S-RANK HUNTER</span>
-                    
-                  </div>
-                </div>
+            
+          </div>
+        ) : (
+          <div className="max-w-4xl mx-auto text-center">
+            <button
+              onClick={() => setShowMissionSelect(true)}
+              className="group relative inline-block"
+            >
+              {/* Glow effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+
+              {/* Button */}
+              <div className="relative bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 hover:from-red-500 hover:via-purple-500 hover:to-pink-500 text-white font-black py-6 px-16 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 flex items-center gap-3 text-2xl border-2 border-red-400/30">
+                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <span>START YOUR HUNT</span>
               </div>
-            </div>
+            </button>
           </div>
         ) : (
           <PoseComparison

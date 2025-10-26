@@ -65,6 +65,7 @@ export default function PoseComparison({
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoCanvasRef = useRef<HTMLCanvasElement>(null);
 
+
   const [similarity, setSimilarity] = useState(0);
   const [isWebcamReady, setIsWebcamReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -653,7 +654,7 @@ export default function PoseComparison({
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="6" y="6" width="12" height="12" />
               </svg>
-              PAUSE
+              Restart
             </span>
           </button>
         )}
