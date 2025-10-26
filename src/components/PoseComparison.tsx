@@ -4,6 +4,7 @@ import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
 
 interface PoseComparisonProps {
   referenceVideoUrl: string;
+  onChangeVideo: () => void;
 }
 
 // Pose connections for drawing skeleton (body only, no face/hand details)
@@ -51,6 +52,7 @@ const LANDMARKS_TO_DRAW = new Set([
 
 export default function PoseComparison({
   referenceVideoUrl,
+  onChangeVideo,
 }: PoseComparisonProps) {
   const webcamRef = useRef<HTMLVideoElement>(null);
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -61,6 +63,15 @@ export default function PoseComparison({
   const [isWebcamReady, setIsWebcamReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarted, setIsStarted] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoDimensions, setVideoDimensions] = useState({
+    width: 640,
+    height: 480,
+  });
+  const [webcamDimensions, setWebcamDimensions] = useState({
+    width: 640,
+    height: 480,
+  });
 
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
@@ -185,13 +196,13 @@ export default function PoseComparison({
         const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+              "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
             delegate: "GPU",
           },
           runningMode: "VIDEO",
           numPoses: 1,
-          minPoseDetectionConfidence: 0.5,
-          minPosePresenceConfidence: 0.5,
+          minPoseDetectionConfidence: 0.7,
+          minPosePresenceConfidence: 0.7,
           minTrackingConfidence: 0.7,
         });
 
@@ -207,9 +218,18 @@ export default function PoseComparison({
         navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
           if (webcamRef.current && mounted) {
             webcamRef.current.srcObject = stream;
-            webcamRef.current.play();
             streamRef.current = stream;
-            setIsWebcamReady(true);
+
+            webcamRef.current.onloadedmetadata = () => {
+              if (webcamRef.current && mounted) {
+                webcamRef.current.play();
+                setWebcamDimensions({
+                  width: webcamRef.current.videoWidth,
+                  height: webcamRef.current.videoHeight,
+                });
+                setIsWebcamReady(true);
+              }
+            };
           }
         });
       } catch (error) {
@@ -247,6 +267,7 @@ export default function PoseComparison({
     if (!isStarted) return;
 
     let shouldContinue = true;
+    setIsVideoPlaying(false);
 
     const processWebcamFrame = () => {
       if (!shouldContinue) return;
@@ -327,6 +348,11 @@ export default function PoseComparison({
           // Detect pose
           const results = poseLandmarker.detectForVideo(video, startTimeMs);
 
+          // Set video playing to true once we start processing frames
+          if (!isVideoPlaying) {
+            setIsVideoPlaying(true);
+          }
+
           // Draw results
           const ctx = canvas.getContext("2d");
           if (ctx) {
@@ -358,8 +384,25 @@ export default function PoseComparison({
 
     // Start the reference video
     if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      videoRef.current.play();
+      const video = videoRef.current;
+
+      // Set video dimensions when playing
+      const handleLoadedMetadata = () => {
+        setVideoDimensions({
+          width: video.videoWidth,
+          height: video.videoHeight,
+        });
+      };
+
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
+      if (video.videoWidth > 0) {
+        handleLoadedMetadata();
+      }
+
+      video.currentTime = 0;
+      video.play().catch((err) => {
+        console.error("Error playing video:", err);
+      });
     }
 
     processWebcamFrame();
@@ -381,10 +424,6 @@ export default function PoseComparison({
     };
   }, [isStarted, drawPoseLandmarks, smoothLandmarks]);
 
-  const handleStart = useCallback(() => {
-    setIsStarted(true);
-  }, []);
-
   const handleStop = useCallback(() => {
     setIsStarted(false);
     setSimilarity(0);
@@ -400,53 +439,54 @@ export default function PoseComparison({
   }
 
   return (
-    <div className="p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Reference Video</h3>
-          <video
-            ref={videoRef}
-            src={referenceVideoUrl}
-            loop
-            muted
-            className="hidden"
-            playsInline
-          />
-          <canvas
-            ref={videoCanvasRef}
-            width={640}
-            height={480}
-            className="w-full border-2 border-blue-500 rounded-lg bg-black"
-          />
-        </div>
-
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Your Webcam</h3>
-          <video
-            ref={webcamRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full hidden aspect-[4/3] border-2 border-green-500 rounded-lg object-contain bg-black"
-          />
-          <canvas
-            ref={webcamCanvasRef}
-            width={640}
-            height={480}
-            className="w-full aspect-[4/3] border-2 border-green-500 rounded-lg object-contain bg-black"
-          />
-          {!isWebcamReady && (
-            <p className="mt-2 text-gray-600">Loading webcam...</p>
-          )}
-        </div>
+    <div className="fixed inset-0 w-full h-full bg-black z-50">
+      {/* Fullscreen Reference Video */}
+      <div className="w-full h-full">
+        <video
+          ref={videoRef}
+          src={referenceVideoUrl}
+          loop
+          muted
+          className="hidden"
+          playsInline
+        />
+        <canvas
+          ref={videoCanvasRef}
+          width={videoDimensions.width}
+          height={videoDimensions.height}
+          className="w-full h-full object-contain"
+        />
       </div>
 
-      <div className="mt-8 text-center">
+      {/* Small Webcam in Corner */}
+      <div className="absolute bottom-6 right-6 w-64">
+        <video ref={webcamRef} autoPlay playsInline muted className="hidden" />
+        <canvas
+          ref={webcamCanvasRef}
+          width={webcamDimensions.width}
+          height={webcamDimensions.height}
+          className="w-full border-2 border-green-500 rounded-lg bg-black shadow-lg"
+          style={{ transform: "scaleX(-1)" }}
+        />
+        {!isWebcamReady && (
+          <p className="mt-2 text-white text-sm">Loading webcam...</p>
+        )}
+      </div>
+
+      {/* Controls Overlay */}
+      <div className="absolute top-6 left-6 z-10 flex gap-4">
+        <button
+          onClick={onChangeVideo}
+          className="text-lg font-semibold py-3 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-colors shadow-lg"
+        >
+          ← Change Video
+        </button>
+
         {!isStarted ? (
           <button
-            onClick={handleStart}
+            onClick={() => setIsStarted(true)}
             disabled={!isWebcamReady}
-            className={`text-xl font-bold py-4 px-8 rounded-lg transition-colors ${
+            className={`text-xl font-bold py-4 px-8 rounded-lg transition-colors shadow-lg ${
               isWebcamReady
                 ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
                 : "bg-gray-400 text-gray-200 cursor-not-allowed"
@@ -457,19 +497,32 @@ export default function PoseComparison({
         ) : (
           <button
             onClick={handleStop}
-            className="text-xl font-bold py-4 px-8 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors"
+            className="text-xl font-bold py-4 px-8 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg"
           >
             ⏹ Stop
           </button>
         )}
       </div>
 
-      {isStarted && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">
-            Similarity Score: {(similarity * 100).toFixed(1)}%
+      {/* Loading State */}
+      {isStarted && !isVideoPlaying && (
+        <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-20">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
+            <p className="text-2xl text-white font-semibold">
+              Starting video...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Similarity Score Overlay */}
+      {isStarted && isVideoPlaying && (
+        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 px-8 py-4 rounded-lg shadow-lg">
+          <h2 className="text-3xl font-bold text-white mb-2 text-center">
+            {(similarity * 100).toFixed(1)}%
           </h2>
-          <div className="w-full h-8 bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-64 h-3 bg-gray-700 rounded-full overflow-hidden">
             <div
               className={`h-full transition-all duration-300 ${
                 similarity > 0.8
@@ -480,11 +533,6 @@ export default function PoseComparison({
               }`}
               style={{ width: `${similarity * 100}%` }}
             />
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <p>Green: Excellent match (&gt;80%)</p>
-            <p>Yellow: Good match (60-80%)</p>
-            <p>Red: Needs improvement (&lt;60%)</p>
           </div>
         </div>
       )}

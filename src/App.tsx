@@ -6,7 +6,7 @@ function App() {
 
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type.startsWith('video/')) {
+    if (file && file.type.startsWith("video/")) {
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
     }
@@ -19,13 +19,16 @@ function App() {
           Just Idol - Pose Similarity Comparison
         </h1>
         <p className="text-center text-gray-600 mb-8">
-          Match your poses with the reference video to improve your dance skills!
+          Match your poses with the reference video to improve your dance
+          skills!
         </p>
 
         {!videoUrl ? (
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <h2 className="text-2xl font-semibold mb-4">Upload a Reference Video</h2>
+              <h2 className="text-2xl font-semibold mb-4">
+                Upload a Reference Video
+              </h2>
               <p className="text-gray-600 mb-6">
                 Choose an MP4 video of the dance or pose you want to practice
               </p>
@@ -65,9 +68,14 @@ function App() {
             <div className="mt-8 p-6 bg-blue-50 rounded-lg">
               <h3 className="text-lg font-semibold mb-2">How to use:</h3>
               <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>Upload a reference video of the pose or dance you want to practice</li>
+                <li>
+                  Upload a reference video of the pose or dance you want to
+                  practice
+                </li>
                 <li>Allow camera access when prompted</li>
-                <li>Position yourself so your full body is visible in the webcam</li>
+                <li>
+                  Position yourself so your full body is visible in the webcam
+                </li>
                 <li>Click "Start Comparison" to begin</li>
                 <li>Follow the reference video movements</li>
                 <li>Watch the similarity score to see how well you match!</li>
@@ -75,28 +83,10 @@ function App() {
             </div>
           </div>
         ) : (
-          <>
-            <div className="mb-4 text-center">
-              <button
-                onClick={() => setVideoUrl(null)}
-                className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                ← Change Video
-              </button>
-            </div>
-
-            <PoseComparison referenceVideoUrl={videoUrl} />
-
-            <div className="mt-8 p-6 bg-blue-50 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2">Tips:</h3>
-              <ul className="list-disc list-inside space-y-2 text-gray-700">
-                <li>Make sure your full body is visible in the webcam</li>
-                <li>Ensure good lighting for better pose detection</li>
-                <li>Try to match the exact pose angles for higher scores</li>
-                <li>Green (&gt;80%) means excellent match!</li>
-              </ul>
-            </div>
-          </>
+          <PoseComparison
+            referenceVideoUrl={videoUrl}
+            onChangeVideo={() => setVideoUrl(null)}
+          />
         )}
       </div>
     </div>
