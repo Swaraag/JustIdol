@@ -76,13 +76,13 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
         
         {/* Fading K-pop Demon Hunter Characters */}
-        <div className="absolute py-4 top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
-          <img 
-            src="/images/demon.png" 
-            alt="" 
-            className="w-280 h-180 object-contain"
-          />
-        </div>
+        <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
+              <img 
+                src="/images/demon.png" 
+                alt="" 
+                className="w-280 h-200 object-contain"
+              />
+            </div>
         {/*
         <div className="absolute bottom-40 left-20 opacity-10 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}>
           <img 
