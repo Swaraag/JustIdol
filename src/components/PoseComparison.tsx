@@ -473,16 +473,57 @@ export default function PoseComparison({
 
   if (isLoading) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-xl">Loading pose detection model...</p>
+      <div className="fixed inset-0 w-full h-full bg-gradient-to-br from-black via-red-950 to-purple-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative w-32 h-32 mx-auto mb-6">
+            {/* Demon hunter summoning circle */}
+            <div className="absolute inset-0 border-4 border-red-600/30 rounded-full"></div>
+            <div className="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-purple-500 rounded-full animate-spin"></div>
+            <div className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+            <div className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <svg className="w-12 h-12 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              </svg>
+            </div>
+          </div>
+          <p className="text-3xl text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400 font-black mb-2">
+            SUMMONING DEMON HUNTER
+          </p>
+          <p className="text-red-300/70 font-medium">Loading pose detection magic...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 w-full h-full bg-black z-50">
+      {/* Demon Hunter Battle Arena Background with Character Silhouettes */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-red-950/50 via-black to-purple-950/50"></div>
+        {/* Mystical demon energy particles */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDuration: '3s' }}></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '4s' }}></div>
+        
+        {/* Fading K-pop performer silhouettes */}
+        <div className="absolute top-10 right-10 opacity-5 animate-pulse" style={{ animationDuration: '4s' }}>
+          <img 
+            src="https://images.unsplash.com/photo-1618331835717-801e976710b2?w=300&h=450&fit=crop&auto=format" 
+            alt="" 
+            className="w-48 h-72 object-cover mix-blend-lighten filter grayscale"
+          />
+        </div>
+        <div className="absolute bottom-10 left-10 opacity-5 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}>
+          <img 
+            src="https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=300&h=450&fit=crop&auto=format" 
+            alt="" 
+            className="w-44 h-66 object-cover mix-blend-lighten filter grayscale"
+          />
+        </div>
+      </div>
+
       {/* Fullscreen Reference Video */}
-      <div className="w-full h-full">
+      <div className="w-full h-full relative">
         <video
           ref={videoRef}
           src={referenceVideoUrl}
@@ -495,140 +536,327 @@ export default function PoseComparison({
           height={videoDimensions.height}
           className="w-full h-full object-contain"
         />
+        {/* Battle arena overlay effect */}
+        <div className="absolute inset-0 pointer-events-none border-8 border-red-900/20"></div>
       </div>
 
-      {/* Small Webcam in Corner */}
-      <div className="absolute bottom-6 right-6 w-64">
-        <video ref={webcamRef} autoPlay playsInline muted className="hidden" />
-        <canvas
-          ref={webcamCanvasRef}
-          width={webcamDimensions.width}
-          height={webcamDimensions.height}
-          className="w-full border-2 border-green-500 rounded-lg bg-black shadow-lg"
-          style={{ transform: "scaleX(-1)" }}
-        />
-        {!isWebcamReady && (
-          <p className="mt-2 text-white text-sm">Loading webcam...</p>
-        )}
+      {/* Demon Hunter Webcam Portal in Corner */}
+      <div className="absolute bottom-8 right-8 w-80">
+        <div className="relative group">
+          {/* Demon energy aura around webcam */}
+          <div className="absolute -inset-2 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
+          
+          <div className="relative">
+            {/* Mystical frame indicators */}
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-transparent via-red-400 to-transparent"></div>
+            <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent"></div>
+            
+            <div className="relative bg-gradient-to-br from-gray-950 to-red-950 rounded-2xl overflow-hidden border-2 border-red-500/50 shadow-2xl shadow-red-500/50">
+              <video ref={webcamRef} autoPlay playsInline muted className="hidden" />
+              <canvas
+                ref={webcamCanvasRef}
+                width={webcamDimensions.width}
+                height={webcamDimensions.height}
+                className="w-full"
+                style={{ transform: "scaleX(-1)" }}
+              />
+              {!isWebcamReady && (
+                <div className="absolute inset-0 bg-black/90 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-red-400 mb-2"></div>
+                    <p className="text-sm font-bold text-red-300">Activating Hunter Vision...</p>
+                  </div>
+                </div>
+              )}
+              {/* Hunter status label */}
+              <div className="absolute top-2 left-2 bg-black/80 px-3 py-1 rounded-lg border border-red-500/50">
+                <p className="text-xs font-black text-red-400">HUNTER CAM</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Controls Overlay */}
-      <div className="absolute top-6 left-6 z-10 flex gap-4">
+      {/* Demon Hunter Control Panel */}
+      <div className="absolute top-8 left-8 z-10 flex gap-4">
         <button
           onClick={onChangeVideo}
-          className="text-lg font-semibold py-3 px-6 rounded-lg bg-gray-600 hover:bg-gray-700 text-white transition-colors shadow-lg"
+          className="group relative px-6 py-3 rounded-xl bg-black/80 backdrop-blur-sm border-2 border-red-700/50 text-red-200 font-black hover:bg-red-950/50 hover:border-red-500 transition-all duration-300 shadow-lg hover:shadow-red-500/50 hover:scale-105"
         >
-          ← Change Video
+          <span className="flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            RETREAT
+          </span>
         </button>
 
         {!isStarted ? (
           <button
             onClick={() => setIsStarted(true)}
             disabled={!isWebcamReady}
-            className={`text-xl font-bold py-4 px-8 rounded-lg transition-colors shadow-lg ${
+            className={`group relative px-8 py-3 rounded-xl font-black text-xl transition-all duration-300 shadow-lg hover:shadow-2xl border-2 ${
               isWebcamReady
-                ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-                : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                ? "bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 text-white hover:scale-110 border-red-400/50 hover:border-red-300 shadow-red-500/50"
+                : "bg-gray-800 text-gray-500 cursor-not-allowed border-gray-700"
             }`}
           >
-            {isWebcamReady ? "▶ Start Comparison" : "⏳ Waiting for webcam..."}
+            <span className="flex items-center gap-3">
+              {isWebcamReady ? (
+                <>
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                  <span>START HUNT</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                  PREPARING HUNTER...
+                </>
+              )}
+            </span>
           </button>
         ) : (
           <button
             onClick={handleStop}
-            className="text-xl font-bold py-4 px-8 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg"
+            className="group relative px-8 py-3 rounded-xl bg-gradient-to-r from-red-700 to-red-900 text-white font-black text-xl hover:from-red-600 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-105 border-2 border-red-500/50"
           >
-            ⏹ Stop
+            <span className="flex items-center gap-2">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <rect x="6" y="6" width="12" height="12" />
+              </svg>
+              END HUNT
+            </span>
           </button>
         )}
       </div>
 
-      {/* Loading State */}
+      {/* Demon Summoning Loading State */}
       {isStarted && !isVideoPlaying && (
-        <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-20">
+        <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-20">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-green-500 mb-4"></div>
-            <p className="text-2xl text-white font-semibold">
-              Starting video...
+            <div className="relative w-32 h-32 mx-auto mb-6">
+              {/* Demon hunter summoning circle animation */}
+              <div className="absolute inset-0 border-4 border-red-600/30 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-purple-500 rounded-full animate-spin"></div>
+              <div className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+              <div className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg className="w-16 h-16 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                </svg>
+              </div>
+            </div>
+            <p className="text-3xl text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400 font-black">
+              INITIALIZING BATTLE
             </p>
+            <p className="text-red-300/70 mt-2 font-medium">Prepare yourself, Hunter...</p>
           </div>
         </div>
       )}
 
-      {/* Similarity Score Overlay */}
+      {/* Demon Hunter Combat Score Display */}
       {isStarted && isVideoPlaying && !isFinished && (
-        <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 px-8 py-4 rounded-lg shadow-lg">
-          <h2 className="text-3xl font-bold text-white mb-2 text-center">
-            {(similarity * 100).toFixed(1)}%
-          </h2>
-          <div className="w-64 h-3 bg-gray-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-300 ${
-                similarity > 0.8
-                  ? "bg-green-500"
-                  : similarity > 0.6
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-              }`}
-              style={{ width: `${similarity * 100}%` }}
-            />
+        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="relative group">
+            {/* Demon energy glow around score */}
+            <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-2xl blur-xl opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
+            
+            <div className="relative bg-black/90 backdrop-blur-md px-10 py-6 rounded-2xl border-2 border-red-500/50 shadow-2xl">
+              {/* Hunter rank indicator */}
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-600 to-purple-600 px-4 py-1 rounded-full border-2 border-red-400/50">
+                <p className="text-xs font-black text-white">SYNC RATE</p>
+              </div>
+              
+              <h2 className="text-6xl font-black mb-3 text-center relative">
+                <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm animate-pulse">
+                  {(similarity * 100).toFixed(1)}%
+                </span>
+                <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
+                  {(similarity * 100).toFixed(1)}%
+                </span>
+              </h2>
+              
+              {/* Demon hunter power bar */}
+              <div className="relative w-80 h-5 bg-gray-900 rounded-full overflow-hidden shadow-inner border border-red-900/50">
+                <div
+                  className={`h-full transition-all duration-300 rounded-full relative ${
+                    similarity > 0.8
+                      ? "bg-gradient-to-r from-red-500 via-pink-500 to-red-500 shadow-lg shadow-red-500/50"
+                      : similarity > 0.6
+                        ? "bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 shadow-lg shadow-purple-500/50"
+                        : "bg-gradient-to-r from-gray-600 via-red-600 to-gray-600 shadow-lg shadow-red-500/30"
+                  }`}
+                  style={{ width: `${similarity * 100}%` }}
+                >
+                  {/* Energy flow animation */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between mt-2 text-xs font-black">
+                <span className="text-red-400">TRAINEE</span>
+                <span className="text-purple-400">A-RANK</span>
+                <span className="text-pink-400">S-RANK</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Final Score Screen */}
+      {/* Demon Hunter Victory/Defeat Screen */}
       {isFinished && (
-        <div className="absolute inset-0 bg-black bg-opacity-95 flex items-center justify-center z-30">
-          <div className="text-center max-w-2xl px-8">
-            <h1 className="text-6xl font-bold text-white mb-4">Final Score</h1>
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-red-950/95 to-purple-950/95 backdrop-blur-xl flex items-center justify-center z-30">
+          {/* Background character images */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-1/4 right-1/4 opacity-5 animate-pulse" style={{ animationDuration: '3s' }}>
+              <img 
+                src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop&auto=format" 
+                alt="" 
+                className="w-64 h-96 object-cover mix-blend-lighten filter grayscale"
+              />
+            </div>
+            <div className="absolute bottom-1/4 left-1/4 opacity-5 animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '4s' }}>
+              <img 
+                src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop&auto=format" 
+                alt="" 
+                className="w-64 h-96 object-cover mix-blend-lighten filter grayscale"
+              />
+            </div>
+          </div>
 
+          <div className="text-center max-w-4xl px-8 relative z-10">
+            {/* Rank announcement */}
             <div className="mb-8">
-              <div className="text-9xl font-bold mb-4">
-                <span
-                  className={`${
+              <div className="relative inline-block mb-6">
+                {/* Epic glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-3xl opacity-60 animate-pulse"></div>
+                
+                <h1 className="relative text-8xl font-black mb-4">
+                  <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
+                    HUNT COMPLETE
+                  </span>
+                  <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
+                    HUNT COMPLETE
+                  </span>
+                </h1>
+              </div>
+              
+              {/* Rank badge */}
+              <div className="relative inline-block mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-pink-600 rounded-3xl blur-2xl opacity-50 animate-pulse"></div>
+                <div className="relative bg-gradient-to-br from-gray-900 via-red-950 to-purple-950 border-4 border-red-500/50 rounded-3xl px-16 py-10 shadow-2xl">
+                  {/* Rank icon */}
+                  <div className="mb-4">
+                    {finalScore > 0.8 ? (
+                      <svg className="w-24 h-24 mx-auto text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                      </svg>
+                    ) : finalScore > 0.6 ? (
+                      <svg className="w-24 h-24 mx-auto text-purple-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                      </svg>
+                    ) : (
+                      <svg className="w-24 h-24 mx-auto text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="text-9xl font-black mb-2">
+                    <span className={`bg-gradient-to-r ${
+                      finalScore > 0.8
+                        ? "from-red-400 via-pink-400 to-red-400"
+                        : finalScore > 0.6
+                          ? "from-purple-400 via-pink-400 to-purple-400"
+                          : "from-gray-400 via-red-400 to-gray-400"
+                    } bg-clip-text text-transparent`}>
+                      {(finalScore * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className={`text-3xl font-black ${
                     finalScore > 0.8
-                      ? "text-green-500"
+                      ? "text-red-400"
                       : finalScore > 0.6
-                        ? "text-yellow-500"
-                        : "text-red-500"
-                  }`}
-                >
-                  {(finalScore * 100).toFixed(1)}%
-                </span>
+                        ? "text-purple-400"
+                        : "text-gray-400"
+                  }`}>
+                    {finalScore > 0.8
+                      ? "S-RANK HUNTER"
+                      : finalScore > 0.6
+                        ? "A-RANK HUNTER"
+                        : "TRAINEE HUNTER"}
+                  </div>
+                </div>
               </div>
 
-              <p className="text-3xl text-white font-semibold mb-2">
+              <p className="text-4xl text-white font-black mb-3">
                 {finalScore > 0.8
-                  ? "🎉 Excellent Performance!"
+                  ? "LEGENDARY PERFORMANCE!"
                   : finalScore > 0.6
-                    ? "👍 Good Job!"
-                    : "💪 Keep Practicing!"}
+                    ? "EXCELLENT TECHNIQUE!"
+                    : "KEEP TRAINING!"}
               </p>
 
-              <p className="text-xl text-gray-300">
+              <p className="text-xl text-red-200/80 mb-8 max-w-2xl mx-auto">
                 {finalScore > 0.8
-                  ? "You nailed it! Your moves were on point!"
+                  ? "You've mastered the demon hunter dance! Your movements are flawless and your technique is legendary!"
                   : finalScore > 0.6
-                    ? "You're doing great! A few more tries and you'll master it!"
-                    : "Don't give up! Practice makes perfect!"}
+                    ? "Strong performance, Hunter! A few more training sessions and you'll reach S-Rank!"
+                    : "Every legend starts somewhere! Keep training and you'll become a master demon hunter!"}
               </p>
             </div>
 
-            <div className="flex gap-4 justify-center">
+            {/* Action buttons with demon hunter styling */}
+            <div className="flex gap-6 justify-center">
               <button
                 onClick={handleRetry}
-                className="text-2xl font-bold py-4 px-10 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors shadow-lg"
+                className="group relative"
               >
-                🔄 Try Again
+                <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-pink-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                <div className="relative px-12 py-5 rounded-xl bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 text-white font-black text-2xl hover:from-red-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 border-2 border-red-400/50">
+                  <span className="flex items-center gap-3">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>RETRY HUNT</span>
+                  </span>
+                </div>
               </button>
 
               <button
                 onClick={onChangeVideo}
-                className="text-2xl font-bold py-4 px-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-lg"
+                className="group relative"
               >
-                📹 New Video
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                <div className="relative px-12 py-5 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-black text-2xl hover:from-purple-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 border-2 border-purple-400/50">
+                  <span className="flex items-center gap-3">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span>NEW MISSION</span>
+                  </span>
+                </div>
               </button>
             </div>
+            
+            {/* Achievement unlocked message for S-Rank */}
+            {finalScore > 0.8 && (
+              <div className="mt-8 inline-block">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur opacity-75 animate-pulse"></div>
+                  <div className="relative bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black px-6 py-3 rounded-xl border-2 border-yellow-300 flex items-center gap-3">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span>ACHIEVEMENT UNLOCKED: DEMON SLAYER</span>
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
