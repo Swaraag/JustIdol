@@ -72,6 +72,7 @@ export default function PoseComparison({
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 640,
     height: 480,
@@ -270,8 +271,30 @@ export default function PoseComparison({
     };
   }, []);
 
+  // Countdown effect - runs when Start is pressed
   useEffect(() => {
-    if (!isStarted) return;
+    if (!isStarted || countdown !== null) return;
+
+    // Start countdown from 3
+    setCountdown(3);
+
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          clearInterval(countdownInterval);
+          return null; // Countdown finished
+        }
+        return prev - 1;
+      });
+    }, 1000); // 1 second intervals
+
+    return () => {
+      clearInterval(countdownInterval);
+    };
+  }, [isStarted]);
+
+  useEffect(() => {
+    if (!isStarted || countdown !== null) return;
 
     let shouldContinue = true;
     setIsVideoPlaying(false);
@@ -468,6 +491,7 @@ export default function PoseComparison({
     setIsVideoPlaying(false);
     setSimilarity(0);
     setFinalScore(0);
+    setCountdown(null);
     scoreHistoryRef.current = [];
     referenceLandmarksRef.current = null;
 
@@ -635,8 +659,33 @@ export default function PoseComparison({
         )}
       </div>
 
+      {/* Countdown Overlay */}
+      {countdown !== null && (
+        <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-30">
+          <div className="text-center">
+            <div className="relative inline-block">
+              {/* Epic glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-full blur-3xl opacity-75 animate-pulse"></div>
+
+              {/* Countdown number */}
+              <h1 className="relative text-[20rem] font-black leading-none">
+                <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-lg animate-pulse">
+                  {countdown}
+                </span>
+                <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
+                  {countdown}
+                </span>
+              </h1>
+            </div>
+            <p className="text-3xl text-white font-black mt-4 animate-pulse">
+              GET READY!
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Demon Summoning Loading State */}
-      {isStarted && !isVideoPlaying && (
+      {isStarted && !isVideoPlaying && countdown === null && (
         <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-20">
           <div className="text-center">
             <div className="relative w-32 h-32 mx-auto mb-6">
@@ -660,7 +709,7 @@ export default function PoseComparison({
       )}
 
       {/* Demon Hunter Combat Score Display */}
-      {isStarted && isVideoPlaying && !isFinished && (
+      {(
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
           <div className="relative group">
             {/* Demon energy glow around score */}
