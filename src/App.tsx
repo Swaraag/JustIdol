@@ -146,23 +146,34 @@ function App() {
         </div>}
 
         {!videoUrl ? showMissionSelect ?  (
-          <div className="max-w-4xl mx-auto ">
+          <div className="max-w-4xl mx-auto">
             {/* Upload Section - Dark Energy Portal */}
             <div className="relative group mb-8">
               {/* Outer glow - demon energy */}
               <div className="absolute -inset-1 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 group-hover:opacity-100 transition duration-500 animate-pulse"></div>
-              
+
               {/* Dark portal with mystical border */}
-              <div 
+              <div
                 className={`relative bg-gradient-to-br from-gray-950 via-red-950/50 to-purple-950/50 backdrop-blur-xl rounded-3xl shadow-2xl p-12 text-center border-2 transition-all duration-300 ${
-                  isDragging 
-                    ? "border-red-400 border-dashed scale-105 shadow-red-500/50 shadow-2xl" 
+                  isDragging
+                    ? "border-red-400 border-dashed scale-105 shadow-red-500/50 shadow-2xl"
                     : "border-red-900/50"
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
               >
+                {/* Back Button - Top Left Corner */}
+                <button
+                  onClick={() => setShowMissionSelect(false)}
+                  className="absolute top-4 left-4 group/back inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-transparent border-2 border-amber-700/40 text-amber-400/70 font-bold hover:bg-amber-600/80 hover:border-amber-500/60 hover:text-white transition-all duration-300 hover:shadow-md hover:shadow-amber-600/30 hover:scale-105 z-10"
+                >
+                  <svg className="w-4 h-4 transition-transform group-hover/back:-translate-x-1 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span>Back</span>
+                </button>
+
                 {/* Mystical portal icon */}
                 <div className="relative mb-6">
                   <div className="w-24 h-24 mx-auto mb-4 relative">
@@ -265,20 +276,29 @@ function App() {
 
       {/* Mode Selector Modal */}
       {showModeSelector && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="relative max-w-5xl w-full mx-4">
-            {/* Close button */}
-            <button
-              onClick={() => setShowModeSelector(false)}
-              className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 text-white font-black text-2xl transition-all duration-300 hover:scale-110 shadow-lg z-10"
-            >
-              ×
-            </button>
-
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
+          onClick={() => setShowModeSelector(false)}
+        >
+          <div
+            className="relative max-w-5xl w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Glow effect */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
 
             <div className="relative bg-gradient-to-br from-gray-950 via-red-950/80 to-purple-950/80 backdrop-blur-xl rounded-3xl p-12 border-2 border-red-500/50">
+              {/* Back Button - Top Left Corner */}
+              <button
+                onClick={() => setShowModeSelector(false)}
+                className="absolute top-4 left-4 group/back inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-transparent border-2 border-amber-700/40 text-amber-400/70 font-bold hover:bg-amber-600/80 hover:border-amber-500/60 hover:text-white transition-all duration-300 hover:shadow-md hover:shadow-amber-600/30 hover:scale-105 z-10"
+              >
+                <svg className="w-4 h-4 transition-transform group-hover/back:-translate-x-1 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Back</span>
+              </button>
+
               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-purple-300 to-pink-300 mb-4 text-center">
                 CHOOSE BETWEEN
               </h2>
@@ -344,20 +364,32 @@ function App() {
 
       {/* Difficulty Selector Modal */}
       {showDifficultySelector && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="relative max-w-5xl w-full mx-4">
-            {/* Close button */}
-            <button
-              onClick={() => setShowDifficultySelector(false)}
-              className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 text-white font-black text-2xl transition-all duration-300 hover:scale-110 shadow-lg z-10"
-            >
-              ×
-            </button>
-
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
+          onClick={() => setShowDifficultySelector(false)}
+        >
+          <div
+            className="relative max-w-5xl w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Glow effect */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
 
             <div className="relative bg-gradient-to-br from-gray-950 via-red-950/80 to-purple-950/80 backdrop-blur-xl rounded-3xl p-12 border-2 border-red-500/50">
+              {/* Back Button - Top Left Corner */}
+              <button
+                onClick={() => {
+                  setShowDifficultySelector(false);
+                  setShowModeSelector(true);
+                }}
+                className="absolute top-4 left-4 group/back inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-transparent border-2 border-amber-700/40 text-amber-400/70 font-bold hover:bg-amber-600/80 hover:border-amber-500/60 hover:text-white transition-all duration-300 hover:shadow-md hover:shadow-amber-600/30 hover:scale-105 z-10"
+              >
+                <svg className="w-4 h-4 transition-transform group-hover/back:-translate-x-1 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                <span>Back</span>
+              </button>
+
               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-purple-300 to-pink-300 mb-4 text-center">
                 SELECT DIFFICULTY
               </h2>
