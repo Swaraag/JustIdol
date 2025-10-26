@@ -64,6 +64,8 @@ export default function PoseComparison({
   const [isLoading, setIsLoading] = useState(true);
   const [isStarted, setIsStarted] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 640,
     height: 480,
@@ -72,6 +74,8 @@ export default function PoseComparison({
     width: 640,
     height: 480,
   });
+
+  const scoreHistoryRef = useRef<number[]>([]);
 
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
@@ -310,6 +314,9 @@ export default function PoseComparison({
                 );
                 const score = calculateSimilarity(normalized1, normalized2);
                 setSimilarity(score);
+
+                // Track score for final average
+                scoreHistoryRef.current.push(score);
               }
             }
 
@@ -391,7 +398,23 @@ export default function PoseComparison({
         });
       };
 
+      // Handle video end
+      const handleVideoEnded = () => {
+        // Calculate final score from history
+        if (scoreHistoryRef.current.length > 0) {
+          const average =
+            scoreHistoryRef.current.reduce((a, b) => a + b, 0) /
+            scoreHistoryRef.current.length;
+          setFinalScore(average);
+        } else {
+          setFinalScore(0);
+        }
+        setIsFinished(true);
+      };
+
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
+      video.addEventListener("ended", handleVideoEnded);
+
       if (video.videoWidth > 0) {
         handleLoadedMetadata();
       }
@@ -410,8 +433,13 @@ export default function PoseComparison({
 
       // Pause the reference video when stopped
       if (videoRef.current) {
-        videoRef.current.pause();
+        const video = videoRef.current;
+        video.pause();
+        video.removeEventListener("ended", () => {});
       }
+
+      // Reset video playing state
+      setIsVideoPlaying(false);
 
       // Reset time refs and smoothing buffers
       lastWebcamTimeRef.current = -1;
@@ -425,6 +453,22 @@ export default function PoseComparison({
     setIsStarted(false);
     setSimilarity(0);
     referenceLandmarksRef.current = null;
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    // Reset all state
+    setIsFinished(false);
+    setIsStarted(false);
+    setIsVideoPlaying(false);
+    setSimilarity(0);
+    setFinalScore(0);
+    scoreHistoryRef.current = [];
+    referenceLandmarksRef.current = null;
+
+    // Restart after a brief delay to ensure cleanup
+    setTimeout(() => {
+      setIsStarted(true);
+    }, 100);
   }, []);
 
   if (isLoading) {
@@ -442,8 +486,6 @@ export default function PoseComparison({
         <video
           ref={videoRef}
           src={referenceVideoUrl}
-          loop
-          muted
           className="hidden"
           playsInline
         />
@@ -514,7 +556,7 @@ export default function PoseComparison({
       )}
 
       {/* Similarity Score Overlay */}
-      {isStarted && isVideoPlaying && (
+      {isStarted && isVideoPlaying && !isFinished && (
         <div className="absolute top-6 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 px-8 py-4 rounded-lg shadow-lg">
           <h2 className="text-3xl font-bold text-white mb-2 text-center">
             {(similarity * 100).toFixed(1)}%
@@ -530,6 +572,63 @@ export default function PoseComparison({
               }`}
               style={{ width: `${similarity * 100}%` }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Final Score Screen */}
+      {isFinished && (
+        <div className="absolute inset-0 bg-black bg-opacity-95 flex items-center justify-center z-30">
+          <div className="text-center max-w-2xl px-8">
+            <h1 className="text-6xl font-bold text-white mb-4">Final Score</h1>
+
+            <div className="mb-8">
+              <div className="text-9xl font-bold mb-4">
+                <span
+                  className={`${
+                    finalScore > 0.8
+                      ? "text-green-500"
+                      : finalScore > 0.6
+                        ? "text-yellow-500"
+                        : "text-red-500"
+                  }`}
+                >
+                  {(finalScore * 100).toFixed(1)}%
+                </span>
+              </div>
+
+              <p className="text-3xl text-white font-semibold mb-2">
+                {finalScore > 0.8
+                  ? "🎉 Excellent Performance!"
+                  : finalScore > 0.6
+                    ? "👍 Good Job!"
+                    : "💪 Keep Practicing!"}
+              </p>
+
+              <p className="text-xl text-gray-300">
+                {finalScore > 0.8
+                  ? "You nailed it! Your moves were on point!"
+                  : finalScore > 0.6
+                    ? "You're doing great! A few more tries and you'll master it!"
+                    : "Don't give up! Practice makes perfect!"}
+              </p>
+            </div>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleRetry}
+                className="text-2xl font-bold py-4 px-10 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-colors shadow-lg"
+              >
+                🔄 Try Again
+              </button>
+
+              <button
+                onClick={onChangeVideo}
+                className="text-2xl font-bold py-4 px-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors shadow-lg"
+              >
+                📹 New Video
+              </button>
+            </div>
           </div>
         </div>
       )}
