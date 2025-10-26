@@ -23,70 +23,61 @@ export function normalizeLandmarks(landmarks: any[]) {
   }));
 }
 
-// Calculate similarity based on angles of limbs relative to torso
+// Calculate similarity between two pose landmarks with weighted scoring
 export function calculateSimilarity(
   landmarks1: any[] | null,
   landmarks2: any[] | null,
 ): number {
   if (!landmarks1 || !landmarks2) return 0;
 
-  // Calculate angles of limbs relative to the torso
-  const getLimbAngles = (landmarks: any[]) => {
-    return {
-      // Upper arms relative to torso
-      leftUpperArm: calculateAngle(landmarks[23], landmarks[11], landmarks[13]),
-      rightUpperArm: calculateAngle(
-        landmarks[24],
-        landmarks[12],
-        landmarks[14],
-      ),
+  // Define landmarks with weights (higher = more important)
+  const landmarkWeights: { [key: number]: number } = {
+    // TORSO - ZERO weight - completely ignored
+    11: 0, // left shoulder
+    12: 0, // right shoulder
+    23: 0, // left hip
+    24: 0, // right hip
 
-      // Forearms (elbow angles)
-      leftForearm: calculateAngle(landmarks[11], landmarks[13], landmarks[15]),
-      rightForearm: calculateAngle(landmarks[12], landmarks[14], landmarks[16]),
+    // ARMS - High weight (2.0x) - very important
+    13: 2.0, // left elbow
+    14: 2.0, // right elbow
+    15: 2.5, // left wrist (even more important - end of limb)
+    16: 2.5, // right wrist
 
-      // Upper legs relative to torso
-      leftUpperLeg: calculateAngle(landmarks[11], landmarks[23], landmarks[25]),
-      rightUpperLeg: calculateAngle(
-        landmarks[12],
-        landmarks[24],
-        landmarks[26],
-      ),
-
-      // Lower legs (knee angles)
-      leftLowerLeg: calculateAngle(landmarks[23], landmarks[25], landmarks[27]),
-      rightLowerLeg: calculateAngle(
-        landmarks[24],
-        landmarks[26],
-        landmarks[28],
-      ),
-    };
+    // LEGS - High weight (2.0x) - very important
+    25: 2.0, // left knee
+    26: 2.0, // right knee
+    27: 2.5, // left ankle (even more important - end of limb)
+    28: 2.5, // right ankle
   };
 
-  const angles1 = getLimbAngles(landmarks1);
-  const angles2 = getLimbAngles(landmarks2);
+  let totalWeightedDistance = 0;
+  let totalWeight = 0;
 
-  let totalDiff = 0;
-  let count = 0;
+  Object.keys(landmarkWeights).forEach((idxStr) => {
+    const idx = parseInt(idxStr);
+    const weight = landmarkWeights[idx];
 
-  for (let key in angles1) {
-    const typedKey = key as keyof typeof angles1;
-    if (
-      angles2[typedKey] !== undefined &&
-      !isNaN(angles1[typedKey]) &&
-      !isNaN(angles2[typedKey])
-    ) {
-      let diff = Math.abs(angles1[typedKey] - angles2[typedKey]);
-      diff = Math.min(diff, 360 - diff);
-      totalDiff += diff;
-      count++;
+    if (landmarks1[idx] && landmarks2[idx]) {
+      const dx = landmarks1[idx].x - landmarks2[idx].x;
+      const dy = landmarks1[idx].y - landmarks2[idx].y;
+      const dz = landmarks1[idx].z - landmarks2[idx].z;
+
+      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+
+      // Apply weight to this landmark's distance
+      totalWeightedDistance += distance * weight;
+      totalWeight += weight;
     }
-  }
+  });
 
-  if (count === 0) return 0;
+  if (totalWeight === 0) return 0;
 
-  const avgDiff = totalDiff / count;
-  const similarity = Math.max(0, 1 - avgDiff / 180);
+  // Calculate weighted average distance
+  const avgWeightedDistance = totalWeightedDistance / totalWeight;
+
+  // Convert distance to similarity (0-1, where 1 is identical)
+  const similarity = Math.max(0, 1 - avgWeightedDistance * 0.8);
 
   return similarity;
 }
@@ -157,128 +148,73 @@ function calculateAngle(a: any, b: any, c: any): number {
   return angle;
 }
 
-// Calculate movement similarity tracking velocity and motion of limbs (excluding torso)
-export function calculateMovementSimilarity(
+// Enhanced similarity with movement penalty
+export function calculateSimilarityWithMovement(
   currentLandmarks1: any[] | null,
   previousLandmarks1: any[] | null,
   currentLandmarks2: any[] | null,
   previousLandmarks2: any[] | null,
 ): number {
-  if (
-    !currentLandmarks1 ||
-    !previousLandmarks1 ||
-    !currentLandmarks2 ||
-    !previousLandmarks2
-  ) {
-    return 1; // No movement data, return neutral score
+  if (!currentLandmarks1 || !currentLandmarks2) return 0;
+
+  // Calculate base pose similarity
+  const poseSimilarity = calculateSimilarity(
+    currentLandmarks1,
+    currentLandmarks2,
+  );
+
+  // If no previous frames, return base similarity
+  if (!previousLandmarks1 || !previousLandmarks2) {
+    return poseSimilarity;
   }
 
-  // Only track limb endpoints (EXCLUDE torso: shoulders 11,12 and hips 23,24)
-  const limbEndpoints = [
-    13,
-    14, // elbows
-    15,
-    16, // wrists
-    25,
-    26, // knees
-    27,
-    28, // ankles
-  ];
+  // Check if reference is moving (any limb endpoint)
+  const limbEndpoints = [13, 14, 15, 16, 25, 26, 27, 28]; // elbows, wrists, knees, ankles
 
-  let totalVelocitySimilarity = 0;
-  let count = 0;
+  let referenceMovementDetected = false;
+  let userMovementDetected = false;
 
   limbEndpoints.forEach((idx) => {
-    if (
-      currentLandmarks1[idx] &&
-      previousLandmarks1[idx] &&
-      currentLandmarks2[idx] &&
-      previousLandmarks2[idx]
-    ) {
-      // Calculate velocity vector for user's limb
-      const velocity1 = {
-        x: currentLandmarks1[idx].x - previousLandmarks1[idx].x,
-        y: currentLandmarks1[idx].y - previousLandmarks1[idx].y,
-        z: currentLandmarks1[idx].z - previousLandmarks1[idx].z,
-      };
-
-      // Calculate velocity vector for reference limb
-      const velocity2 = {
+    if (currentLandmarks2[idx] && previousLandmarks2[idx]) {
+      const refDelta = {
         x: currentLandmarks2[idx].x - previousLandmarks2[idx].x,
         y: currentLandmarks2[idx].y - previousLandmarks2[idx].y,
         z: currentLandmarks2[idx].z - previousLandmarks2[idx].z,
       };
-
-      // Calculate velocity magnitudes (speed)
-      const speed1 = Math.sqrt(
-        velocity1.x ** 2 + velocity1.y ** 2 + velocity1.z ** 2,
-      );
-      const speed2 = Math.sqrt(
-        velocity2.x ** 2 + velocity2.y ** 2 + velocity2.z ** 2,
+      const refSpeed = Math.sqrt(
+        refDelta.x ** 2 + refDelta.y ** 2 + refDelta.z ** 2,
       );
 
-      // If both limbs are moving
-      if (speed1 > 0.001 && speed2 > 0.001) {
-        // Calculate directional similarity using dot product (cosine similarity)
-        const dotProduct =
-          (velocity1.x * velocity2.x +
-            velocity1.y * velocity2.y +
-            velocity1.z * velocity2.z) /
-          (speed1 * speed2);
-        const directionSimilarity = (dotProduct + 1) / 2; // Normalize [-1,1] to [0,1]
-
-        // Calculate speed similarity
-        const speedRatio = Math.min(speed1, speed2) / Math.max(speed1, speed2);
-
-        // Combine: direction (80%) is more important than exact speed (20%)
-        const velocitySimilarity = directionSimilarity * 0.8 + speedRatio * 0.2;
-        totalVelocitySimilarity += velocitySimilarity;
-        count++;
+      if (refSpeed > 0.005) {
+        // Movement threshold
+        referenceMovementDetected = true;
       }
-      // If both limbs are stationary (both not moving = perfect match)
-      else if (speed1 <= 0.001 && speed2 <= 0.001) {
-        totalVelocitySimilarity += 1.0;
-        count++;
-      }
-      // If one is moving and the other isn't (penalty)
-      else {
-        const maxSpeed = Math.max(speed1, speed2);
-        // Heavy penalty for mismatched motion state
-        const penalty = Math.max(0, 1 - maxSpeed * 15);
-        totalVelocitySimilarity += penalty;
-        count++;
+    }
+
+    if (currentLandmarks1[idx] && previousLandmarks1[idx]) {
+      const userDelta = {
+        x: currentLandmarks1[idx].x - previousLandmarks1[idx].x,
+        y: currentLandmarks1[idx].y - previousLandmarks1[idx].y,
+        z: currentLandmarks1[idx].z - previousLandmarks1[idx].z,
+      };
+      const userSpeed = Math.sqrt(
+        userDelta.x ** 2 + userDelta.y ** 2 + userDelta.z ** 2,
+      );
+
+      if (userSpeed > 0.005) {
+        // Movement threshold
+        userMovementDetected = true;
       }
     }
   });
 
-  if (count === 0) return 1;
+  // Apply penalty if reference is moving but user is not
+  let finalScore = poseSimilarity;
 
-  return totalVelocitySimilarity / count;
-}
+  if (referenceMovementDetected && !userMovementDetected) {
+    // EXTREME PENALTY: User is frozen when they should be moving
+    finalScore *= 0.05; // Reduce score by 95%!
+  }
 
-// Combined similarity: pose angles + limb velocity (excluding torso motion)
-export function calculateCombinedSimilarity(
-  currentWebcamLandmarks: any[] | null,
-  previousWebcamLandmarks: any[] | null,
-  currentReferenceLandmarks: any[] | null,
-  previousReferenceLandmarks: any[] | null,
-): number {
-  // Calculate static pose similarity (limb angles relative to torso)
-  const poseSimilarity = calculateSimilarity(
-    currentWebcamLandmarks,
-    currentReferenceLandmarks,
-  );
-
-  // Calculate movement similarity (limb velocity, excluding torso)
-  const movementSimilarity = calculateMovementSimilarity(
-    currentWebcamLandmarks,
-    previousWebcamLandmarks,
-    currentReferenceLandmarks,
-    previousReferenceLandmarks,
-  );
-
-  // Combine both scores (50% pose positioning, 50% limb motion)
-  const combinedScore = poseSimilarity * 0.5 + movementSimilarity * 0.5;
-
-  return combinedScore;
+  return finalScore;
 }
