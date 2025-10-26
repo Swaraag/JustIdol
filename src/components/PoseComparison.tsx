@@ -2,9 +2,12 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
 
+type GameMode = 'sing' | 'dance' | 'both' | null;
+
 interface PoseComparisonProps {
   referenceVideoUrl: string;
   onChangeVideo: () => void;
+  gameMode: GameMode;
 }
 
 // Pose connections for drawing skeleton (body only, no face/hand details)
@@ -53,7 +56,10 @@ const LANDMARKS_TO_DRAW = new Set([
 export default function PoseComparison({
   referenceVideoUrl,
   onChangeVideo,
+  gameMode,
 }: PoseComparisonProps) {
+  // Log gameMode for debugging (you can access it anywhere in this component)
+  console.log("Current game mode:", gameMode);
   const webcamRef = useRef<HTMLVideoElement>(null);
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

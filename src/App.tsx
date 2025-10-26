@@ -2,11 +2,14 @@ import { useState } from "react";
 import PoseComparison from "./components/PoseComparison";
 
 type Difficulty = 'easy' | 'medium' | 'hard' | null;
+type GameMode = 'sing' | 'dance' | 'both' | null;
 
 function App() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showModeSelector, setShowModeSelector] = useState(false);
   const [showDifficultySelector, setShowDifficultySelector] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<GameMode>(null);
 
   // Difficulty video paths - UPDATE THESE WITH YOUR ACTUAL VIDEO FILES
   const difficultyVideos = {
@@ -20,6 +23,14 @@ function App() {
     if (file && file.type.startsWith("video/")) {
       const url = URL.createObjectURL(file);
       setVideoUrl(url);
+    }
+  };
+
+  const handleModeSelect = (mode: GameMode) => {
+    if (mode) {
+      setSelectedMode(mode);
+      setShowModeSelector(false);
+      setShowDifficultySelector(true);
     }
   };
 
@@ -173,14 +184,14 @@ function App() {
 
                 {/* Dual Button Layout */}
                 <div className="flex gap-6 justify-center items-center flex-wrap">
-                  {/* Difficulty Selector Button */}
+                  {/* Mode Selector Button */}
                   <button
-                    onClick={() => setShowDifficultySelector(true)}
+                    onClick={() => setShowModeSelector(true)}
                     className="group/btn relative"
                   >
                     {/* Button glow effect */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-75 group-hover/btn:opacity-100 transition duration-300"></div>
-                    
+
                     <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:via-pink-500 hover:to-purple-500 text-white font-black py-5 px-12 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 flex items-center gap-3 text-xl border-2 border-purple-400/30">
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -267,9 +278,89 @@ function App() {
           <PoseComparison
             referenceVideoUrl={videoUrl}
             onChangeVideo={() => setVideoUrl(null)}
+            gameMode={selectedMode}
           />
         )}
       </div>
+
+      {/* Mode Selector Modal */}
+      {showModeSelector && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="relative max-w-5xl w-full mx-4">
+            {/* Close button */}
+            <button
+              onClick={() => setShowModeSelector(false)}
+              className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-red-600 hover:bg-red-500 text-white font-black text-2xl transition-all duration-300 hover:scale-110 shadow-lg z-10"
+            >
+              ×
+            </button>
+
+            {/* Glow effect */}
+            <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
+
+            <div className="relative bg-gradient-to-br from-gray-950 via-red-950/80 to-purple-950/80 backdrop-blur-xl rounded-3xl p-12 border-2 border-red-500/50">
+              <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-purple-300 to-pink-300 mb-4 text-center">
+                CHOOSE BETWEEN
+              </h2>
+              <p className="text-center text-red-200/70 mb-12 text-lg">
+                Select your training mode, Hunter!
+              </p>
+
+              {/* Mode Cards */}
+              <div className="grid md:grid-cols-3 gap-6">
+                {/* Just Sing */}
+                <button
+                  onClick={() => handleModeSelect('sing')}
+                  className="group relative"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
+                  <div className="relative bg-gradient-to-br from-gray-900 to-blue-950 rounded-2xl p-8 border-2 border-blue-500/50 hover:border-blue-400 transition-all duration-300 hover:scale-105 shadow-xl">
+                    <div className="text-6xl mb-4 text-center">🎤</div>
+                    <h3 className="text-3xl font-black text-blue-400 mb-2 text-center">JUST SING</h3>
+                    <p className="text-blue-200/70 text-center text-sm">
+                      Voice training only
+                    </p>
+                  </div>
+                </button>
+
+                {/* Just Dance */}
+                <button
+                  onClick={() => handleModeSelect('dance')}
+                  className="group relative"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
+                  <div className="relative bg-gradient-to-br from-gray-900 to-purple-950 rounded-2xl p-8 border-2 border-purple-500/50 hover:border-purple-400 transition-all duration-300 hover:scale-105 shadow-xl">
+                    <div className="text-6xl mb-4 text-center">💃</div>
+                    <h3 className="text-3xl font-black text-purple-400 mb-2 text-center">JUST DANCE</h3>
+                    <p className="text-purple-200/70 text-center text-sm">
+                      Movement training only
+                    </p>
+                  </div>
+                </button>
+
+                {/* Both - Extra Special */}
+                <button
+                  onClick={() => handleModeSelect('both')}
+                  className="group relative"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-yellow-600 via-orange-600 to-red-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse"></div>
+                  <div className="relative bg-gradient-to-br from-gray-900 via-orange-950 to-red-950 rounded-2xl p-8 border-2 border-orange-500/50 hover:border-orange-400 transition-all duration-300 hover:scale-110 shadow-2xl">
+                    <div className="text-6xl mb-4 text-center">⭐</div>
+                    <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 mb-2 text-center">BOTH</h3>
+                    <p className="text-orange-200/70 text-center text-sm mb-2">
+                      Ultimate challenge!
+                    </p>
+                    <div className="flex justify-center gap-2 text-xs">
+                      <span className="px-2 py-1 rounded bg-orange-500/30 text-orange-300 font-bold">ELITE</span>
+                      <span className="px-2 py-1 rounded bg-red-500/30 text-red-300 font-bold">MASTER</span>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Difficulty Selector Modal */}
       {showDifficultySelector && (
@@ -285,7 +376,7 @@ function App() {
 
             {/* Glow effect */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
-            
+
             <div className="relative bg-gradient-to-br from-gray-950 via-red-950/80 to-purple-950/80 backdrop-blur-xl rounded-3xl p-12 border-2 border-red-500/50">
               <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-purple-300 to-pink-300 mb-4 text-center">
                 SELECT DIFFICULTY
