@@ -1,8 +1,6 @@
-'use client';
-
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, Play, Pause, Volume2, VolumeX } from 'lucide-react';
-import { YINPitchDetector, PitchFrame } from '@/lib/pitchAnalysis';
+import { YINPitchDetector, PitchFrame } from '../lib/pitchAnalysis';
 
 interface AudioPlayerProps {
   onReferenceData: (frames: PitchFrame[]) => void;
@@ -218,8 +216,8 @@ export default function AudioPlayer({ onReferenceData, onPlaybackStateChange }: 
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-white">Backing Track</h2>
         {isAnalyzing && (
-          <div className="flex items-center space-x-2 text-karaoke-warning">
-            <div className="w-4 h-4 border-2 border-karaoke-warning border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center space-x-2 text-yellow-400">
+            <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
             <span className="text-sm">Analyzing...</span>
           </div>
         )}
@@ -264,7 +262,7 @@ export default function AudioPlayer({ onReferenceData, onPlaybackStateChange }: 
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2">
               <div 
-                className="bg-karaoke-primary h-2 rounded-full transition-all duration-100"
+                className="bg-red-500 h-2 rounded-full transition-all duration-100"
                 style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
               />
             </div>
@@ -295,7 +293,7 @@ export default function AudioPlayer({ onReferenceData, onPlaybackStateChange }: 
                 step="0.1"
                 value={isMuted ? 0 : volume}
                 onChange={handleVolumeChange}
-                className="w-20 accent-karaoke-primary"
+                className="w-20 accent-red-500"
               />
             </div>
           </div>
@@ -304,8 +302,8 @@ export default function AudioPlayer({ onReferenceData, onPlaybackStateChange }: 
           {isPlaying && (
             <div className="mt-4 text-center">
               <div className="flex items-center justify-center space-x-2">
-                <div className="w-3 h-3 bg-karaoke-primary rounded-full animate-pulse" />
-                <span className="text-karaoke-primary font-semibold">Playing</span>
+                <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                <span className="text-red-500 font-semibold">Playing</span>
               </div>
             </div>
           )}

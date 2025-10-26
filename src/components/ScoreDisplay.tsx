@@ -1,8 +1,6 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { Trophy, Target, Clock, Activity, Star, TrendingUp } from 'lucide-react';
-import { PitchAnalysisResult, analyzePitchPerformance, PitchFrame } from '@/lib/pitchAnalysis';
+import { PitchAnalysisResult, analyzePitchPerformance, PitchFrame } from '../lib/pitchAnalysis';
 
 interface ScoreDisplayProps {
   referenceFrames: PitchFrame[];
@@ -78,7 +76,7 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
         <h2 className="text-2xl font-bold text-white">Performance Score</h2>
         <button
           onClick={() => setShowDetailedBreakdown(!showDetailedBreakdown)}
-          className="text-sm text-karaoke-primary hover:text-karaoke-primary/80 transition-colors"
+          className="text-sm text-red-500 hover:text-red-600 transition-colors"
         >
           {showDetailedBreakdown ? 'Hide Details' : 'Show Details'}
         </button>
@@ -86,7 +84,7 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
 
       {isAnalyzing ? (
         <div className="text-center py-12">
-          <div className="w-16 h-16 border-4 border-karaoke-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400">Analyzing your performance...</p>
         </div>
       ) : analysisResult ? (
@@ -94,7 +92,7 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
           {/* Main Score Display */}
           <div className={`rounded-xl p-8 text-center border-2 ${getScoreBackground(analysisResult.overallScore)}`}>
             <div className="flex items-center justify-center space-x-4 mb-4">
-              <Trophy className="w-8 h-8 text-karaoke-warning" />
+              <Trophy className="w-8 h-8 text-yellow-400" />
               <div>
                 <div className={`text-6xl font-bold ${getScoreColor(analysisResult.overallScore)}`}>
                   {analysisResult.overallScore}
@@ -117,12 +115,12 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
           {/* Score Breakdown */}
           {showDetailedBreakdown && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-karaoke-accent rounded-lg p-4">
+              <div className="bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Target className="w-5 h-5 text-karaoke-primary" />
+                  <Target className="w-5 h-5 text-red-500" />
                   <span className="font-semibold text-white">Pitch Accuracy</span>
                 </div>
-                <div className="text-3xl font-bold text-karaoke-primary">
+                <div className="text-3xl font-bold text-red-500">
                   {analysisResult.pitchAccuracy}%
                 </div>
                 <div className="text-sm text-gray-400">
@@ -130,18 +128,18 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
                 </div>
                 <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
                   <div 
-                    className="bg-karaoke-primary h-2 rounded-full transition-all duration-500"
+                    className="bg-red-500 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${analysisResult.pitchAccuracy}%` }}
                   />
                 </div>
               </div>
 
-              <div className="bg-karaoke-accent rounded-lg p-4">
+              <div className="bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Clock className="w-5 h-5 text-karaoke-secondary" />
+                  <Clock className="w-5 h-5 text-blue-600" />
                   <span className="font-semibold text-white">Timing</span>
                 </div>
-                <div className="text-3xl font-bold text-karaoke-secondary">
+                <div className="text-3xl font-bold text-blue-600">
                   {analysisResult.timingAccuracy}%
                 </div>
                 <div className="text-sm text-gray-400">
@@ -149,18 +147,18 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
                 </div>
                 <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
                   <div 
-                    className="bg-karaoke-secondary h-2 rounded-full transition-all duration-500"
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${analysisResult.timingAccuracy}%` }}
                   />
                 </div>
               </div>
 
-              <div className="bg-karaoke-accent rounded-lg p-4">
+              <div className="bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Activity className="w-5 h-5 text-karaoke-success" />
+                  <Activity className="w-5 h-5 text-green-400" />
                   <span className="font-semibold text-white">Stability</span>
                 </div>
-                <div className="text-3xl font-bold text-karaoke-success">
+                <div className="text-3xl font-bold text-green-400">
                   {analysisResult.vocalStability}%
                 </div>
                 <div className="text-sm text-gray-400">
@@ -168,7 +166,7 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
                 </div>
                 <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
                   <div 
-                    className="bg-karaoke-success h-2 rounded-full transition-all duration-500"
+                    className="bg-green-400 h-2 rounded-full transition-all duration-500"
                     style={{ width: `${analysisResult.vocalStability}%` }}
                   />
                 </div>
@@ -178,7 +176,7 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
 
           {/* Score History */}
           {scoreHistory.length > 1 && (
-            <div className="mt-6 bg-karaoke-accent rounded-lg p-4">
+            <div className="mt-6 bg-gray-700 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Score History</h3>
                 <div className="flex items-center space-x-2">
@@ -212,9 +210,9 @@ export default function ScoreDisplay({ referenceFrames, userFrames, isAnalyzing 
           )}
 
           {/* Tips for Improvement */}
-          <div className="mt-6 bg-karaoke-accent rounded-lg p-4">
+          <div className="mt-6 bg-gray-700 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-white mb-3 flex items-center space-x-2">
-              <Star className="w-5 h-5 text-karaoke-warning" />
+              <Star className="w-5 h-5 text-yellow-400" />
               <span>Tips for Improvement</span>
             </h3>
             <div className="space-y-2 text-sm text-gray-300">

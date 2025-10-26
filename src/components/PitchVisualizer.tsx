@@ -1,8 +1,6 @@
-'use client';
-
 import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { PitchFrame } from '@/lib/pitchAnalysis';
+import { PitchFrame } from '../lib/pitchAnalysis';
 
 interface PitchVisualizerProps {
   referenceFrames: PitchFrame[];
@@ -138,7 +136,7 @@ export default function PitchVisualizer({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-karaoke-card border border-karaoke-accent rounded-lg p-3 shadow-lg">
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-lg">
           <p className="text-white font-semibold">Time: {label}s</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
@@ -166,7 +164,7 @@ export default function PitchVisualizer({
               type="checkbox"
               checked={isPracticeMode}
               onChange={(e) => setIsPracticeMode(e.target.checked)}
-              className="w-4 h-4 text-karaoke-primary bg-karaoke-accent border-gray-600 rounded focus:ring-karaoke-primary"
+              className="w-4 h-4 text-red-500 bg-gray-700 border-gray-600 rounded focus:ring-red-500"
             />
             <span className="text-sm text-gray-300">Practice Mode</span>
           </label>
@@ -175,9 +173,9 @@ export default function PitchVisualizer({
 
       {/* Current Pitch Display */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-karaoke-accent rounded-lg p-4">
+        <div className="bg-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Target Pitch</h3>
-          <div className="text-2xl font-bold text-karaoke-primary">
+          <div className="text-2xl font-bold text-red-500">
             {currentReferencePitch ? frequencyToNoteName(currentReferencePitch) : 'N/A'}
           </div>
           {currentReferencePitch && (
@@ -187,9 +185,9 @@ export default function PitchVisualizer({
           )}
         </div>
         
-        <div className="bg-karaoke-accent rounded-lg p-4">
+        <div className="bg-gray-700 rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-400 mb-2">Your Pitch</h3>
-          <div className="text-2xl font-bold text-karaoke-success">
+          <div className="text-2xl font-bold text-green-400">
             {currentUserPitch ? frequencyToNoteName(currentUserPitch) : 'N/A'}
           </div>
           {currentUserPitch && (
@@ -202,7 +200,7 @@ export default function PitchVisualizer({
 
       {/* Practice Mode Feedback */}
       {isPracticeMode && currentUserPitch && currentReferencePitch && (
-        <div className="mb-6 p-4 bg-karaoke-accent rounded-lg">
+        <div className="mb-6 p-4 bg-gray-700 rounded-lg">
           <h3 className="text-lg font-semibold text-white mb-2">Practice Feedback</h3>
           {(() => {
             const semitoneDiff = Math.abs(12 * Math.log2(currentUserPitch / currentReferencePitch));
@@ -210,15 +208,15 @@ export default function PitchVisualizer({
             
             if (centsOff < 50) {
               return (
-                <div className="text-karaoke-success flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-karaoke-success rounded-full" />
+                <div className="text-green-400 flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full" />
                   <span>Perfect! You're on pitch!</span>
                 </div>
               );
             } else if (centsOff < 100) {
               return (
-                <div className="text-karaoke-warning flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-karaoke-warning rounded-full" />
+                <div className="text-yellow-400 flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-400 rounded-full" />
                   <span>Close! Try adjusting slightly.</span>
                 </div>
               );
@@ -289,11 +287,11 @@ export default function PitchVisualizer({
       {/* Legend */}
       <div className="flex items-center justify-center space-x-6 mt-4 text-sm">
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-1 bg-karaoke-primary" />
+          <div className="w-4 h-1 bg-red-500" />
           <span className="text-gray-300">Target Pitch</span>
         </div>
         <div className="flex items-center space-x-2">
-          <div className="w-4 h-1 bg-karaoke-success" />
+          <div className="w-4 h-1 bg-green-400" />
           <span className="text-gray-300">Your Pitch</span>
         </div>
       </div>

@@ -1,8 +1,6 @@
-'use client';
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
-import { PitchFrame } from '@/lib/pitchAnalysis';
+import { PitchFrame } from '../lib/pitchAnalysis';
 
 interface MicrophoneInputProps {
   onPitchDetected: (frame: PitchFrame) => void;
@@ -244,7 +242,7 @@ export default function MicrophoneInput({
   }, []);
 
   return (
-    <div className={`bg-karaoke-card border border-karaoke-accent rounded-lg p-6 ${className}`}>
+    <div className={`bg-gray-800 border border-gray-700 rounded-lg p-6 ${className}`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Microphone Input</h3>
         <div className="flex items-center space-x-2">
@@ -253,7 +251,7 @@ export default function MicrophoneInput({
             className={`p-2 rounded-lg transition-colors ${
               isMuted 
                 ? 'bg-red-500 hover:bg-red-600 text-white' 
-                : 'bg-karaoke-accent hover:bg-karaoke-primary text-white'
+                : 'bg-gray-700 hover:bg-red-500 text-white'
             }`}
             title={isMuted ? 'Unmute' : 'Mute'}
           >
@@ -278,7 +276,7 @@ export default function MicrophoneInput({
               isRecording
                 ? 'bg-red-500 hover:bg-red-600 text-white scale-105'
                 : permissionGranted
-                ? 'bg-karaoke-primary hover:bg-karaoke-primary/80 text-white'
+                ? 'bg-red-500 hover:bg-red-500/80 text-white'
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
             }`}
           >
@@ -302,11 +300,11 @@ export default function MicrophoneInput({
             <span>Volume Level</span>
             <span>{Math.round(volume)} dB</span>
           </div>
-          <div className="w-full bg-karaoke-accent rounded-full h-2">
+          <div className="w-full bg-gray-700 rounded-full h-2">
             <div
               className={`h-2 rounded-full transition-all duration-100 ${
-                volume > -20 ? 'bg-karaoke-success' : 
-                volume > -40 ? 'bg-karaoke-warning' : 'bg-gray-600'
+                volume > -20 ? 'bg-green-400' : 
+                volume > -40 ? 'bg-yellow-400' : 'bg-gray-600'
               }`}
               style={{ width: `${Math.max(0, Math.min(100, (volume + 60) * 1.67))}%` }}
             />
@@ -317,7 +315,7 @@ export default function MicrophoneInput({
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${
-              permissionGranted ? 'bg-karaoke-success' : 'bg-gray-600'
+              permissionGranted ? 'bg-green-400' : 'bg-gray-600'
             }`} />
             <span className="text-gray-400">
               {permissionGranted ? 'Microphone Ready' : 'No Permission'}

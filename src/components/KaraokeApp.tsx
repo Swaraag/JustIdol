@@ -1,9 +1,9 @@
-'use client';
-
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Play, Pause, Square, Upload, X } from 'lucide-react';
 import { AudioAnalyzer, AudioDevice, ScoreData, ReferencePitchData, KaraokeScore } from '../lib/audioAnalyzer';
-import AudioVisualizer from '../components/AudioVisualizer';
+import { ZoneScoreData } from '../lib/zoneScoring';
+import AudioVisualizer from './AudioVisualizer';
+import ZoneScoreDisplay from './ZoneScoreDisplay';
 
 export default function KaraokeApp() {
   // State management
@@ -16,6 +16,7 @@ export default function KaraokeApp() {
   const [fileInfo, setFileInfo] = useState<{ name: string; duration: number; size: number } | null>(null);
   const [currentScore, setCurrentScore] = useState<ScoreData>({ overall: 0, pitch: 0, timing: 0 });
   const [karaokeScore, setKaraokeScore] = useState<KaraokeScore | null>(null);
+  const [zoneScore, setZoneScore] = useState<ZoneScoreData | null>(null);
   const [targetNote, setTargetNote] = useState('N/A');
   const [userNote, setUserNote] = useState('N/A');
   const [userPitch, setUserPitch] = useState(0);
@@ -35,8 +36,6 @@ export default function KaraokeApp() {
   const scoreCountRef = useRef(0);
   const referencePitchDataRef = useRef<ReferencePitchData[]>([]);
 
-  // Animation frame ref
-  const animationFrameRef = useRef<number | null>(null);
 
   // Initialize audio context and enumerate devices
   useEffect(() => {
@@ -53,14 +52,18 @@ export default function KaraokeApp() {
 
       // Get user pitch (always available when microphone is connected)
       const userPitchResult = audioAnalyzerRef.current.getCurrentPitch();
+      const userVolume = audioAnalyzerRef.current.getCurrentVolume();
+      
       if (userPitchResult.frequency > 0) {
         setUserPitch(userPitchResult.frequency);
         const userNoteName = audioAnalyzerRef.current.frequencyToNoteName(userPitchResult.frequency);
         setUserNote(userNoteName);
       }
 
-      // Get video pitch (only when video audio is connected)
+      // Get video pitch and vocal activity (only when video audio is connected)
       const videoPitchResult = audioAnalyzerRef.current.getReferencePitch();
+      const vocalActivity = audioAnalyzerRef.current.getReferenceVocalActivity();
+      
       if (videoPitchResult.frequency > 0) {
         setVideoPitch(videoPitchResult.frequency);
         const targetNoteName = audioAnalyzerRef.current.frequencyToNoteName(videoPitchResult.frequency);
@@ -80,11 +83,55 @@ export default function KaraokeApp() {
           setKaraokeScore(score);
         }
       }
+
+      // Calculate confidence based on volume and pitch presence
+      const userConfidence = userPitchResult.frequency > 0 ? Math.min(1.0, userVolume * 2) : 0;
+      const targetConfidence = videoPitchResult.frequency > 0 ? Math.min(1.0, videoPitchResult.confidence) : 0;
+      
+      // Debug confidence values
+      if (userVolume > 0.1) {
+        console.log('Confidence values:', {
+          userPitch: userPitchResult.frequency,
+          userVolume,
+          userConfidence,
+          targetConfidence,
+          originalUserConfidence: userPitchResult.confidence
+        });
+      }
+      
+      // Only update zone scoring system when recording is active
+      if (isRecording) {
+        audioAnalyzerRef.current.addAnalysisFrameToZoneScoring(
+          userPitchResult.frequency,
+          videoPitchResult.frequency,
+          Date.now(),
+          userVolume,
+          !vocalActivity.isActive, // isInstrumental
+          userConfidence,
+          targetConfidence
+        );
+        
+        // Update zone score display only during recording
+        const zoneScoreData = audioAnalyzerRef.current.getZoneScore();
+        setZoneScore(zoneScoreData);
+        
+        // Debug logging (only when score changes)
+        if (zoneScoreData.totalScore > 0) {
+          console.log('Zone Score Updated:', zoneScoreData.totalScore, 'History Length:', audioAnalyzerRef.current.getZoneScoringSystem().getHistoryLength());
+        }
+      } else {
+        // When not recording, show empty score and reset zone scoring
+        setZoneScore(null);
+        // Reset zone scoring system when not recording
+        if (audioAnalyzerRef.current) {
+          audioAnalyzerRef.current.getZoneScoringSystem().reset();
+        }
+      }
     };
 
     const interval = setInterval(monitorPitches, 100); // Update every 100ms
     return () => clearInterval(interval);
-  }, [audioAnalyzerRef.current]);
+  }, [audioAnalyzerRef.current, isRecording]);
 
   const initializeAudioAnalyzer = async () => {
     try {
@@ -165,8 +212,6 @@ export default function KaraokeApp() {
       audioAnalyzerRef.current.resetScoreHistory();
       setKaraokeScore(null);
       
-      startAnalysis();
-      
     } catch (error) {
       console.error('Error starting recording:', error);
       showStatus(`Error starting recording: ${error}`, 'error');
@@ -178,53 +223,9 @@ export default function KaraokeApp() {
       audioAnalyzerRef.current.stopRecording();
     }
     
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
     setIsRecording(false);
   };
 
-  const startAnalysis = () => {
-    if (!audioAnalyzerRef.current) return;
-
-    const analyze = () => {
-      if (!isRecording || !audioAnalyzerRef.current) return;
-
-      // Get current pitch and volume
-      const pitchResult = audioAnalyzerRef.current.getCurrentPitch();
-      const volume = audioAnalyzerRef.current.getCurrentVolume();
-      
-      // Get reference data for comparison
-      const referencePitch = audioAnalyzerRef.current.getReferencePitch();
-      const vocalActivity = audioAnalyzerRef.current.getReferenceVocalActivity();
-
-      // Calculate score
-      const score = audioAnalyzerRef.current.calculateScore(
-        pitchResult.frequency, 
-        volume, 
-        referencePitch.frequency, 
-        vocalActivity
-      );
-      
-      // Add to running average
-      allScoresRef.current.push(score.overall);
-      totalScoreSumRef.current += score.overall;
-      scoreCountRef.current++;
-
-      const averageScore = Math.round(totalScoreSumRef.current / scoreCountRef.current);
-      
-      setCurrentScore({
-        overall: averageScore,
-        pitch: score.pitch,
-        timing: score.timing
-      });
-
-      animationFrameRef.current = requestAnimationFrame(analyze);
-    };
-
-    analyze();
-  };
 
   const openKaraokeOverlay = async () => {
     if (!fileInfo || !audioAnalyzerRef.current) {
@@ -399,6 +400,16 @@ export default function KaraokeApp() {
           </div>
         </div>
 
+        {/* Zone-Based Score Display - Only show when recording */}
+        {isKaraokeMode && isRecording && (
+          <div className="mb-6">
+            <ZoneScoreDisplay
+              zoneScoringSystem={audioAnalyzerRef.current?.getZoneScoringSystem() || null}
+              isAnalyzing={false}
+            />
+          </div>
+        )}
+
         {/* Score Display */}
         {isKaraokeMode && (
           <div className="mb-6 p-6 bg-gray-800 rounded-lg">
@@ -494,7 +505,7 @@ export default function KaraokeApp() {
 
       {/* Karaoke Overlay */}
       {isOverlayOpen && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
           <div className="w-full h-full flex flex-col">
             {/* Close Button */}
             <button
@@ -593,6 +604,31 @@ export default function KaraokeApp() {
                   <div className="text-xs text-gray-400">{videoPitch > 0 ? `${videoPitch.toFixed(0)}Hz` : 'No audio'}</div>
                 </div>
               </div>
+
+              {/* Continuous Zone Score Display - Only show when recording */}
+              {isRecording && zoneScore && (
+                <div className="mb-4 p-3 bg-gray-700 rounded-lg">
+                  <h4 className="text-sm font-medium mb-2 text-purple-400 text-center">🏆 Zone Score</h4>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-400 mb-1">Cumulative Score:</div>
+                    <div className={`text-2xl font-bold ${
+                      zoneScore.totalScore >= 90 ? 'text-green-400' :
+                      zoneScore.totalScore >= 80 ? 'text-yellow-400' :
+                      zoneScore.totalScore >= 70 ? 'text-orange-400' : 'text-red-400'
+                    }`}>
+                      {zoneScore.totalScore}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {zoneScore.totalScore >= 95 ? '🎉 PERFECT!' :
+                       zoneScore.totalScore >= 90 ? '🌟 EXCELLENT!' :
+                       zoneScore.totalScore >= 80 ? '👏 GREAT!' :
+                       zoneScore.totalScore >= 70 ? '👍 GOOD!' :
+                       zoneScore.totalScore >= 60 ? '🎵 OKAY!' :
+                       zoneScore.totalScore >= 50 ? '🎤 FAIR!' : '🎶 Keep trying!'}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Overlay Pitch Comparison */}
               {userPitch > 0 && videoPitch > 0 && (

@@ -3,6 +3,8 @@
  * Handles pitch detection, vocal activity detection, and audio analysis
  */
 
+import { ZoneScoringSystem, ZoneScoreData } from './zoneScoring.ts';
+
 export interface AudioDevice {
   deviceId: string;
   label: string;
@@ -291,9 +293,13 @@ export class AudioAnalyzer {
   // Scoring system
   private scoreHistory: number[] = [];
   private maxScoreHistory = 50; // Keep last 50 scores for averaging
+  
+  // Zone-based scoring system
+  private zoneScoringSystem: ZoneScoringSystem;
 
   constructor() {
     this.initializeAudioContext();
+    this.zoneScoringSystem = new ZoneScoringSystem();
   }
 
   private async initializeAudioContext(): Promise<void> {
@@ -910,6 +916,76 @@ export class AudioAnalyzer {
 
   resetScoreHistory(): void {
     this.scoreHistory = [];
+    this.zoneScoringSystem.reset();
+  }
+
+  // Zone-based scoring methods
+  getZoneScoringSystem(): ZoneScoringSystem {
+    return this.zoneScoringSystem;
+  }
+
+  getZoneScore(): ZoneScoreData {
+    return this.zoneScoringSystem.calculateZoneScore();
+  }
+
+  // Add analysis frame directly to zone scoring system
+  addAnalysisFrameToZoneScoring(
+    userPitch: number,
+    targetPitch: number,
+    timestamp: number,
+    volume: number,
+    isInstrumental: boolean,
+    userConfidence: number = 1.0,
+    targetConfidence: number = 1.0
+  ): void {
+    // Only add frames with valid user pitch to avoid noise
+    if (userPitch > 0 || volume > 0.1) {
+      this.zoneScoringSystem.addAnalysisFrame(
+        userPitch,
+        targetPitch,
+        timestamp,
+        volume,
+        isInstrumental,
+        userConfidence,
+        targetConfidence
+      );
+    }
+  }
+
+  // Enhanced scoring method that integrates zone scoring
+  calculateEnhancedScore(
+    userPitch: number,
+    userVolume: number,
+    targetPitch: number = 0,
+    vocalActivity: VocalActivity,
+    timestamp: number = Date.now()
+  ): ScoreData {
+    // Determine if this is an instrumental part
+    const isInstrumental = !vocalActivity.isActive;
+    
+    // Add frame to zone scoring system
+    this.zoneScoringSystem.addAnalysisFrame(
+      userPitch,
+      targetPitch,
+      timestamp,
+      userVolume,
+      isInstrumental,
+      userPitch > 0 ? 1.0 : 0.0, // User confidence
+      targetPitch > 0 ? 1.0 : 0.0 // Target confidence
+    );
+
+    // Calculate traditional score for backward compatibility
+    const traditionalScore = this.calculateScore(userPitch, userVolume, targetPitch, vocalActivity);
+    
+    // Get zone-based score
+    const zoneScore = this.zoneScoringSystem.calculateZoneScore();
+    
+    // Return enhanced score that combines both systems
+    return {
+      overall: Math.round((traditionalScore.overall + zoneScore.totalScore) / 2),
+      pitch: Math.round((traditionalScore.pitch + zoneScore.totalScore) / 2),
+      timing: traditionalScore.timing
+    };
   }
 
   cleanup(): void {

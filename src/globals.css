@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   html {
@@ -8,33 +6,33 @@
   }
   
   body {
-    @apply bg-karaoke-bg text-white;
+    @apply bg-gray-900 text-white;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-karaoke-primary hover:bg-karaoke-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95;
+    @apply bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 transform hover:scale-105 active:scale-95;
   }
   
   .btn-secondary {
-    @apply bg-karaoke-secondary hover:bg-karaoke-secondary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200;
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200;
   }
   
   .card {
-    @apply bg-karaoke-card border border-karaoke-accent rounded-xl p-6 shadow-lg;
+    @apply bg-gray-800 border border-gray-700 rounded-xl p-6 shadow-lg;
   }
   
   .input-field {
-    @apply bg-karaoke-accent border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-karaoke-primary focus:outline-none transition-colors;
+    @apply bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-red-500 focus:outline-none transition-colors;
   }
 
   .karaoke-overlay {
-    @apply fixed inset-0 z-50 bg-black bg-opacity-95 flex items-center justify-center;
+    @apply fixed inset-0 z-50 bg-black/95 flex items-center justify-center;
   }
 
   .score-display {
-    @apply text-center p-6 bg-karaoke-card rounded-xl border border-karaoke-accent;
+    @apply text-center p-6 bg-gray-800 rounded-xl border border-gray-700;
   }
 
   .note-display {
@@ -42,23 +40,23 @@
   }
 
   .target-note {
-    @apply text-karaoke-primary;
+    @apply text-red-500;
   }
 
   .user-note {
-    @apply text-karaoke-success;
+    @apply text-green-400;
   }
 
   .accuracy-perfect {
-    @apply text-karaoke-success;
+    @apply text-green-400;
   }
 
   .accuracy-good {
-    @apply text-karaoke-warning;
+    @apply text-yellow-400;
   }
 
   .accuracy-poor {
-    @apply text-karaoke-primary;
+    @apply text-red-500;
   }
 }
 
