@@ -267,14 +267,8 @@ function App() {
 
       {/* Mode Selector Modal */}
       {showModeSelector && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
-          onClick={() => setShowModeSelector(false)}
-        >
-          <div
-            className="relative max-w-5xl w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="relative max-w-5xl w-full mx-4">
             {/* Glow effect */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
 
@@ -355,14 +349,8 @@ function App() {
 
       {/* Difficulty Selector Modal */}
       {showDifficultySelector && (
-        <div
-          className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn"
-          onClick={() => setShowDifficultySelector(false)}
-        >
-          <div
-            className="relative max-w-5xl w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+          <div className="relative max-w-5xl w-full mx-4">
             {/* Glow effect */}
             <div className="absolute -inset-2 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
 

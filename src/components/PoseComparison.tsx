@@ -295,6 +295,7 @@ export default function PoseComparison({
   }, [isStarted]);
 
   useEffect(() => {
+    // Only start video processing after countdown is complete
     if (!isStarted || countdown !== null) return;
 
     let shouldContinue = true;
@@ -477,7 +478,7 @@ export default function PoseComparison({
       webcamLandmarksBufferRef.current = [];
       videoLandmarksBufferRef.current = [];
     };
-  }, [isStarted, drawPoseLandmarks, smoothLandmarks]);
+  }, [isStarted, countdown, drawPoseLandmarks, smoothLandmarks]);
 
   const handleStop = useCallback(() => {
     setIsStarted(false);
