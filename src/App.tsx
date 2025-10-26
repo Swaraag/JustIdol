@@ -348,7 +348,7 @@ function App() {
                     <div className="text-6xl mb-4 text-center">⭐</div>
                     <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 mb-2 text-center">BOTH</h3>
                     <p className="text-orange-200/70 text-center text-sm mb-2">
-                      Ultimate challenge!
+                      Just Sing + Just Dance
                     </p>
                     <div className="flex justify-center gap-2 text-xs">
                       <span className="px-2 py-1 rounded bg-orange-500/30 text-orange-300 font-bold">ELITE</span>

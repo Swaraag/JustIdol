@@ -1,14 +1,12 @@
-# 3, 2, 1 countdown
-# them being able to watch the video once before it becomes official
-# put it in front of them, let them choose but guide them, and hten let them be able to demo themselves if htey want to
+# put it in front of them, let them choose but guide them, and them let them be able to demo themselves if htey want to
 # explaining how we built the program
 # choosing mission is the next step that you click into 
 # get points, get xp, gamify the process
 # make the Upload Video less important and more of an option if they want it
 # show a mention of the song before each of the easy, medium, difficulty option
 # upload a video should open a folder that has all of the Kpop demon hunters songs that they acn choose from if they want to recognize
-# sync rate should stay when you pause the game
-
+# When it says 3, the text below should be Get Ready! When it says 2, the text should be Get Set, and when it says 1, it should say GO
+# them being able to watch the video once before it becomes official
 
 
 Where to Access the Selected Mode:
