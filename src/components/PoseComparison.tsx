@@ -611,7 +611,7 @@ export default function PoseComparison({
         
         // Calculate final combined score (dance is 0-1, needs to be converted to 0-100)
         const finalCombined = Math.round((finalDanceScore * 100 + finalVocal) / 2);
-        setFinalCombinedScore(gameMode === "both" ? finalCombined : gameMode === "dance" ? Math.trunc(finalDanceScore * 100) : finalVocal);
+        setFinalCombinedScore(gameMode === "both" ? (finalCombined + 7) : gameMode === "dance" ? Math.trunc(finalDanceScore * 100) : (finalVocal+7));
         
         console.log("🎯 Final Scores Calculated:", {
           dance: finalDanceScore,

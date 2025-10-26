@@ -319,7 +319,7 @@ export interface ZoneScoreData {
       let cumulativeScore = 80; // Default starting score
       if (this.instantaneousScoreHistory.length > 0) {
         const sum = this.instantaneousScoreHistory.reduce((total, score) => total + score, 0);
-        cumulativeScore = Math.round(sum / this.instantaneousScoreHistory.length);
+        cumulativeScore = Math.min(100, Math.round(sum / this.instantaneousScoreHistory.length));
       }
 
       console.log('Score calculation:', {
