@@ -63,6 +63,7 @@ export default function PoseComparison({
   const [isWebcamReady, setIsWebcamReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarted, setIsStarted] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
@@ -263,6 +264,23 @@ export default function PoseComparison({
       }
     };
   }, []);
+
+  // Countdown effect
+  useEffect(() => {
+    if (countdown === null || countdown <= 0) return;
+
+    const timer = setTimeout(() => {
+      if (countdown === 1) {
+        // Countdown finished, start the video
+        setCountdown(null);
+        setIsStarted(true);
+      } else {
+        setCountdown(countdown - 1);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [countdown]);
 
   useEffect(() => {
     if (!isStarted) return;
@@ -465,9 +483,9 @@ export default function PoseComparison({
     scoreHistoryRef.current = [];
     referenceLandmarksRef.current = null;
 
-    // Restart after a brief delay to ensure cleanup
+    // Restart with countdown
     setTimeout(() => {
-      setIsStarted(true);
+      setCountdown(3);
     }, 100);
   }, []);
 
@@ -521,9 +539,9 @@ export default function PoseComparison({
           ← Change Video
         </button>
 
-        {!isStarted ? (
+        {!isStarted && countdown === null ? (
           <button
-            onClick={() => setIsStarted(true)}
+            onClick={() => setCountdown(3)}
             disabled={!isWebcamReady}
             className={`text-xl font-bold py-4 px-8 rounded-lg transition-colors shadow-lg ${
               isWebcamReady
@@ -534,14 +552,28 @@ export default function PoseComparison({
             {isWebcamReady ? "▶ Start Comparison" : "⏳ Waiting for webcam..."}
           </button>
         ) : (
-          <button
-            onClick={handleStop}
-            className="text-xl font-bold py-4 px-8 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg"
-          >
-            ⏹ Stop
-          </button>
+          isStarted && (
+            <button
+              onClick={handleStop}
+              className="text-xl font-bold py-4 px-8 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors shadow-lg"
+            >
+              ⏹ Stop
+            </button>
+          )
         )}
       </div>
+
+      {/* Countdown Overlay */}
+      {countdown !== null && countdown > 0 && (
+        <div className="absolute inset-0 bg-black bg-opacity-90 flex items-center justify-center z-20">
+          <div className="text-center">
+            <div className="text-9xl font-bold text-white mb-4 animate-pulse">
+              {countdown}
+            </div>
+            <p className="text-3xl text-white font-semibold">Get Ready!</p>
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {isStarted && !isVideoPlaying && (
