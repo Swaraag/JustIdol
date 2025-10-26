@@ -1,6 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
+import { KaraokeScoringHookResult } from "../hooks/useKaraokeScoring.ts";
+import AudioVisualizer from "./karaoke/AudioVisualizer.tsx";
 
 type GameMode = "sing" | "dance" | "both" | null;
 
@@ -8,6 +10,8 @@ interface PoseComparisonProps {
   referenceVideoUrl: string;
   onChangeVideo: () => void;
   gameMode: GameMode;
+  karaoke: KaraokeScoringHookResult;
+  selectedMicrophone: string;
 }
 
 // Pose connections for drawing skeleton (body only, no face/hand details)
@@ -57,9 +61,10 @@ export default function PoseComparison({
   referenceVideoUrl,
   onChangeVideo,
   gameMode,
+  karaoke,
+  selectedMicrophone,
 }: PoseComparisonProps) {
   // Log gameMode for debugging (you can access it anywhere in this component)
-  console.log("Current game mode:", gameMode);
   const webcamRef = useRef<HTMLVideoElement>(null);
   const webcamCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -73,6 +78,9 @@ export default function PoseComparison({
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [combinedScore, setCombinedScore] = useState(0);
+  const [finalCombinedScore, setFinalCombinedScore] = useState(0);
+  const [finalVocalScore, setFinalVocalScore] = useState(0);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 640,
     height: 480,
@@ -83,6 +91,7 @@ export default function PoseComparison({
   });
 
   const scoreHistoryRef = useRef<number[]>([]);
+  const finalZoneScoreRef = useRef<any>(null); // Store final zone score before cleanup
 
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
@@ -293,12 +302,105 @@ export default function PoseComparison({
     };
   }, [isStarted]);
 
-  useEffect(() => {
-    // Only start video processing after countdown is complete
-    if (!isStarted || countdown !== null) return;
+  // useEffect(() => {
+  //   // Only start video processing after countdown is complete
+  //   if (!isStarted || countdown !== null) return;
+  // });
 
+  // Connect video audio when video is loaded and ready
+  useEffect(() => {
+    if (!videoRef.current || !referenceVideoUrl) return;
+
+    const video = videoRef.current;
+    console.log("🎥 Setting up video audio connection...");
+
+    const handleCanPlay = async () => {
+      try {
+        console.log("🎵 Video ready, connecting audio...");
+        await karaoke.connectVideo(video);
+        console.log("✅ Video audio connected for karaoke!");
+      } catch (err) {
+        console.error("❌ Failed to connect video audio:", err);
+      }
+    };
+
+    const handleLoadedData = async () => {
+      try {
+        console.log("📊 Video data loaded, connecting audio...");
+        await karaoke.connectVideo(video);
+        console.log("✅ Video audio connected!");
+      } catch (err) {
+        console.error("❌ Failed to connect video audio:", err);
+      }
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('loadeddata', handleLoadedData);
+
+    // Also try to connect immediately if video is already ready
+    if (video.readyState >= 2) {
+      console.log("🎬 Video already ready, connecting immediately...");
+      handleCanPlay();
+    }
+
+    return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('loadeddata', handleLoadedData);
+      karaoke.disconnectVideo();
+      console.log("🔌 Video audio disconnected");
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referenceVideoUrl]);
+
+  // Calculate combined score (dance + vocal) - use cumulative score for average of all singing
+  useEffect(() => {
+    if (karaoke.zoneScore && isStarted) {
+      // Store the zone score in a ref so we can access it even after recording stops
+      finalZoneScoreRef.current = karaoke.zoneScore;
+      
+      const danceScore = similarity * 100;
+      // Use cumulativeScore for average of entire performance
+      const vocalScore = karaoke.zoneScore.cumulativeScore || 0;
+
+      // 50/50 split
+      const combined = Math.round((danceScore + vocalScore) / 2);
+      setCombinedScore(combined);
+    }
+  }, [similarity, karaoke.zoneScore, isStarted]);
+
+  useEffect(() => {
+    if (!isStarted) return;
+    console.log("useEffect Started");
     let shouldContinue = true;
     setIsVideoPlaying(false);
+
+    // Start karaoke recording when dance starts
+    const startKaraoke = async () => {
+      if (selectedMicrophone) {
+        try {
+          await karaoke.startRecording(selectedMicrophone);
+          console.log("🎤 Karaoke recording started!");
+        } catch (error) {
+          console.error("Failed to start karaoke recording:", error);
+        }
+      }
+    };
+
+    startKaraoke();
+    
+    // Monitor recording progress every 2 seconds
+    const progressInterval = setInterval(() => {
+      if (karaoke.isRecording) {
+        console.log("🎤 Recording Progress:", {
+          isRecording: karaoke.isRecording,
+          hasZoneScore: !!karaoke.zoneScore,
+          cumulativeScore: karaoke.zoneScore?.cumulativeScore || 0,
+          totalScore: karaoke.zoneScore?.totalScore || 0,
+          userNote: karaoke.userNote,
+          targetNote: karaoke.targetNote
+        });
+      }
+    }, 2000);
 
     const processWebcamFrame = () => {
       if (!shouldContinue) return;
@@ -430,15 +532,81 @@ export default function PoseComparison({
 
       // Handle video end
       const handleVideoEnded = () => {
-        // Calculate final score from history
+        console.log("🎬 Video ended, capturing final scores...");
+        
+        // Calculate final dance score from history
+        let finalDanceScore = 0;
         if (scoreHistoryRef.current.length > 0) {
           const average =
             scoreHistoryRef.current.reduce((a, b) => a + b, 0) /
             scoreHistoryRef.current.length;
+          finalDanceScore = average;
           setFinalScore(average);
-        } else {
-          setFinalScore(0);
         }
+        
+        // Get zone score - try current first, fall back to stored ref
+        let zoneScore = karaoke.zoneScore;
+        if (!zoneScore) {
+          zoneScore = finalZoneScoreRef.current;
+          console.log("⚠️ Using stored zone score from ref (karaoke.zoneScore was null)");
+        }
+        
+        console.log("📊 Current karaoke state:", {
+          isRecording: karaoke.isRecording,
+          hasZoneScore: !!zoneScore,
+          zoneScore: zoneScore
+        });
+        
+        console.log("🎤 ZoneScore details:", {
+          exists: !!zoneScore,
+          cumulativeScore: zoneScore?.cumulativeScore,
+          totalScore: zoneScore?.totalScore,
+          perfectZone: zoneScore?.perfectZone,
+          greatZone: zoneScore?.greatZone,
+          allProperties: zoneScore ? Object.keys(zoneScore) : []
+        });
+        
+        // Get final vocal score - prioritize cumulative (full performance average)
+        let finalVocal = 0;
+        if (zoneScore) {
+          // Use cumulativeScore if available and not 0, otherwise fall back to totalScore
+          if (zoneScore.cumulativeScore !== undefined && zoneScore.cumulativeScore > 0) {
+            finalVocal = zoneScore.cumulativeScore;
+          } else if (zoneScore.totalScore !== undefined && zoneScore.totalScore > 0) {
+            finalVocal = zoneScore.totalScore;
+          } else {
+            // Last resort: calculate from zone percentages
+            const zoneTotal = (zoneScore.perfectZone || 0) + (zoneScore.greatZone || 0) + 
+                             (zoneScore.keepTryingZone || 0);
+            if (zoneTotal > 0) {
+              finalVocal = Math.round(zoneTotal * 100); // Percentage of time in good zones
+            }
+          }
+        }
+        
+        console.log("🎯 Final vocal score determined:", finalVocal);
+        setFinalVocalScore(finalVocal);
+        
+        // Calculate final combined score (dance is 0-1, needs to be converted to 0-100)
+        const finalCombined = Math.round((finalDanceScore * 100 + finalVocal) / 2);
+        setFinalCombinedScore(gameMode === "both" ? finalCombined : gameMode === "dance" ? Math.trunc(finalDanceScore * 100) : finalVocal);
+        
+        console.log("🎯 Final Scores Calculated:", {
+          dance: finalDanceScore,
+          dancePercent: (finalDanceScore * 100).toFixed(2),
+          vocal: finalVocal,
+          vocalPercent: finalVocal.toFixed(2),
+          combined: finalCombined,
+          zoneScoreExists: !!zoneScore,
+          cumulativeScore: zoneScore?.cumulativeScore,
+          totalScore: zoneScore?.totalScore
+        });
+
+        // Stop recording immediately now that we've captured all scores
+        karaoke.stopRecording();
+        console.log("🛑 Recording stopped");
+
+        // Mark as finished
         setIsFinished(true);
       };
 
@@ -449,6 +617,20 @@ export default function PoseComparison({
         handleLoadedMetadata();
       }
 
+      // Enable audio for the video
+      video.muted = false;
+      video.volume = 1.0;
+      
+      console.log("🎬 Starting video, ensuring audio is connected...");
+
+      // Ensure video audio is connected
+      karaoke.connectVideo(video).then(() => {
+        console.log("✅ Video audio reconnected on start");
+      }).catch((err) => {
+        console.error("❌ Failed to connect video audio on start:", err);
+      });
+
+      // Only reset and play if video is paused
       video.currentTime = 0;
       video.play().catch((err) => {
         console.error("Error playing video:", err);
@@ -460,6 +642,15 @@ export default function PoseComparison({
 
     return () => {
       shouldContinue = false;
+      
+      // Clear progress monitoring interval
+      clearInterval(progressInterval);
+
+      // DON'T stop recording here if video hasn't ended - let handleVideoEnded do it
+      // If user manually stopped, then stop recording
+      if (!videoRef.current?.ended) {
+        karaoke.stopRecording();
+      }
 
       // Pause the reference video when stopped
       if (videoRef.current) {
@@ -483,7 +674,8 @@ export default function PoseComparison({
     setIsStarted(false);
     setSimilarity(0);
     referenceLandmarksRef.current = null;
-  }, []);
+    karaoke.stopRecording();
+  }, [karaoke]);
 
   const handleRetry = useCallback(() => {
     // Reset all state
@@ -493,14 +685,19 @@ export default function PoseComparison({
     setSimilarity(0);
     setFinalScore(0);
     setCountdown(null);
+    setCombinedScore(0);
+    setFinalCombinedScore(0);
+    setFinalVocalScore(0);
     scoreHistoryRef.current = [];
+    finalZoneScoreRef.current = null;
     referenceLandmarksRef.current = null;
+    karaoke.reset();
 
     // Restart after a brief delay to ensure cleanup
     setTimeout(() => {
       setIsStarted(true);
     }, 100);
-  }, []);
+  }, [karaoke]);
 
   if (isLoading) {
     return (
@@ -577,6 +774,7 @@ export default function PoseComparison({
           src={referenceVideoUrl}
           className="hidden"
           playsInline
+          crossOrigin="anonymous"
         />
         <canvas
           ref={videoCanvasRef}
@@ -632,6 +830,7 @@ export default function PoseComparison({
           </div>
         </div>
       </div>
+
 
       {/* Demon Hunter Control Panel */}
       <div className="absolute top-8 left-8 z-10">
@@ -730,45 +929,7 @@ export default function PoseComparison({
         </div>
       )}
 
-      {/* Demon Summoning Loading State */}
-      {isStarted && !isVideoPlaying && countdown === null && (
-        <div className="absolute inset-0 bg-black/95 backdrop-blur-sm flex items-center justify-center z-20">
-          <div className="text-center">
-            <div className="relative w-32 h-32 mx-auto mb-6">
-              {/* Demon hunter summoning circle animation */}
-              <div className="absolute inset-0 border-4 border-red-600/30 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-transparent border-t-red-500 border-r-purple-500 rounded-full animate-spin"></div>
-              <div
-                className="absolute inset-3 border-4 border-transparent border-t-purple-500 border-r-pink-500 rounded-full animate-spin"
-                style={{
-                  animationDirection: "reverse",
-                  animationDuration: "1.5s",
-                }}
-              ></div>
-              <div
-                className="absolute inset-6 border-4 border-transparent border-t-pink-500 rounded-full animate-spin"
-                style={{ animationDuration: "1s" }}
-              ></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg
-                  className="w-16 h-16 text-red-400"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400 font-black">
-              INITIALIZING BATTLE
-            </p>
-            <p className="text-red-300/70 mt-2 font-medium">
-              Prepare yourself, Hunter...
-            </p>
-          </div>
-        </div>
-      )}
-
+      
       {/* Demon Hunter Combat Score Display */}
       {
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-10">
@@ -779,15 +940,15 @@ export default function PoseComparison({
             <div className="relative px-10 py-6 rounded-2xl border-2 border-red-500/50 shadow-2xl">
               {/* Hunter rank indicator */}
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-600 to-purple-600 px-4 py-1 rounded-full border-2 border-red-400/50">
-                <p className="text-xs font-black text-white">SYNC RATE</p>
+                <p className="text-xs font-black text-white">TOTAL SYNC RATE</p>
               </div>
 
               <h2 className="text-6xl font-black mb-3 text-center relative">
                 <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-xs animate-pulse">
-                  {(similarity * 100).toFixed(1)}%
+                  {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0": (similarity * 100).toFixed(0)}%
                 </span>
                 <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
-                  {(similarity * 100).toFixed(1)}%
+                    {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0" : (similarity * 100).toFixed(0)}%
                 </span>
               </h2>
 
@@ -804,6 +965,7 @@ export default function PoseComparison({
                 <span className="text-purple-500/80">A-RANK</span>
                 <span className="text-rose-500/80">S-RANK</span>
               </div>
+
             </div>
           </div>
         </div>
@@ -838,12 +1000,12 @@ export default function PoseComparison({
 
           <div className="text-center max-w-4xl px-8 relative z-10">
             {/* Rank announcement */}
-            <div className="mb-8">
+            <div>
               <div className="relative inline-block mb-6">
                 {/* Epic glow effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 rounded-3xl blur-3xl opacity-60 animate-pulse"></div>
 
-                <h1 className="relative text-8xl font-black mb-4">
+                <h1 className="relative text-8xl font-black -mb-2">
                   <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
                     HUNT COMPLETE
                   </span>
@@ -853,73 +1015,67 @@ export default function PoseComparison({
                 </h1>
               </div>
 
-              {/* Rank badge */}
+              {/* Combined Final Score Badge */}
               <div className="relative inline-block mb-6">
                 <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-pink-600 rounded-3xl blur-2xl opacity-50 animate-pulse"></div>
                 <div className="relative bg-gradient-to-br from-gray-900 via-red-950 to-purple-950 border-4 border-red-500/50 rounded-3xl px-16 py-10 shadow-2xl">
-                  {/* Rank icon */}
-                  <div className="mb-4">
-                    {finalScore > 0.8 ? (
-                      <svg
-                        className="w-24 h-24 mx-auto text-red-400"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    ) : finalScore > 0.6 ? (
-                      <svg
-                        className="w-24 h-24 mx-auto text-red-400"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="w-24 h-24 mx-auto text-red-400"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                      </svg>
-                    )}
-                  </div>
+                  
+
+                  {/* Combined Score */}
                   <div className="text-9xl font-black mb-2">
                     <span
-                      className={`bg-gradient-to-r from-red-400 via-pink-400 to-red-400 bg-clip-text text-transparent`}
+                      className={`bg-gradient-to-r ${
+                        finalCombinedScore > 80
+                          ? "from-red-400 via-pink-400 to-red-400"
+                          : finalCombinedScore > 60
+                          ? "from-purple-400 via-pink-400 to-purple-400"
+                          : "from-gray-400 via-red-400 to-gray-400"
+                      } bg-clip-text text-transparent`}
                     >
-                      {(finalScore * 100).toFixed(1)}%
+                      {finalCombinedScore}%
                     </span>
                   </div>
+                  {gameMode !== "both" &&  <div className="mb-4 text-3xl font-black text-purple-400">{gameMode?.toUpperCase()}</div>}
+
+                  {/* Individual Scores Breakdown */}
+                  {gameMode === "both" && <div className="flex justify-center gap-8 mb-4">
+                    <div className="text-center">
+                      <p className="text-sm text-purple-300 font-bold mb-1">
+                        DANCE
+                      </p>
+                      <p className="text-3xl font-black text-purple-400">
+                        {(finalScore * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="text-4xl text-red-500/50">+</div>
+                    <div className="text-center">
+                      <p className="text-sm text-pink-300 font-bold mb-1">
+                        VOCAL
+                      </p>
+                      <p className="text-3xl font-black text-pink-400">
+                        {finalVocalScore}%
+                      </p>
+                    </div>
+                  </div>}
+
                   <div
-                    className={`text-3xl font-black text-red-400
-                    `}
+                    className={`text-3xl font-black ${
+                      finalCombinedScore > 80
+                        ? "text-red-400"
+                        : finalCombinedScore > 60
+                        ? "text-purple-400"
+                        : "text-gray-400"
+                    }`}
                   >
-                    {finalScore > 0.8
+                    {finalCombinedScore > 80
                       ? "S-RANK HUNTER"
-                      : finalScore > 0.6
+                      : finalCombinedScore > 60
                       ? "A-RANK HUNTER"
                       : "TRAINEE HUNTER"}
                   </div>
                 </div>
               </div>
 
-              <p className="text-4xl text-white font-black mb-3">
-                {finalScore > 0.8
-                  ? "LEGENDARY PERFORMANCE!"
-                  : finalScore > 0.6
-                  ? "EXCELLENT TECHNIQUE!"
-                  : "KEEP TRAINING!"}
-              </p>
-
-              <p className="text-xl text-red-200/80 mb-8 max-w-2xl mx-auto">
-                {finalScore > 0.8
-                  ? "You've mastered the demon hunter dance! Your movements are flawless and your technique is legendary!"
-                  : finalScore > 0.6
-                  ? "Strong performance, Hunter! A few more training sessions and you'll reach S-Rank!"
-                  : "Every legend starts somewhere! Keep training and you'll become a master demon hunter!"}
-              </p>
             </div>
 
             {/* Action buttons with demon hunter styling */}
@@ -970,7 +1126,7 @@ export default function PoseComparison({
             </div>
 
             {/* Achievement unlocked message for S-Rank */}
-            {finalScore > 0.8 && (
+            {finalCombinedScore > 80 && (
               <div className="mt-8 inline-block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur opacity-75 animate-pulse"></div>

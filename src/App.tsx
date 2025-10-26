@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import PoseComparison from "./components/PoseComparison";
+import { useKaraokeScoring } from "./hooks/useKaraokeScoring.ts";
+import { AudioDevice } from "./lib/audioAnalyzer.ts";
 
 type Difficulty = 'easy' | 'medium' | 'hard' | null;
 type GameMode = 'sing' | 'dance' | 'both' | null;
@@ -12,11 +14,18 @@ function App() {
   const [selectedMode, setSelectedMode] = useState<GameMode>(null);
   const [showMissionSelect, setShowMissionSelect] = useState<boolean>(false);
 
+  const karaoke = useKaraokeScoring();
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Microphone selection state
+  const [devices, setDevices] = useState<any[]>([]);
+  const [selectedMicrophone, setSelectedMicrophone] = useState<string>("");
+
   // Difficulty video paths - UPDATE THESE WITH YOUR ACTUAL VIDEO FILES
   const difficultyVideos = {
-    easy: 'public/videos/easy-dance.mp4',
-    medium: 'public/videos/medium-dance.mp4',
-    hard: 'public/videos/hard-dance.mp4'
+    easy: "/videos/easy-dance.mp4",
+    medium: "/videos/medium-dance.mp4",
+    hard: "/videos/hard-dance.mp4",
   };
  
   const handleVideoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,7 +64,7 @@ function App() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith("video/")) {
       const url = URL.createObjectURL(file);
@@ -63,13 +72,56 @@ function App() {
     }
   };
 
+  // ✅ Connect video when element is ready
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      // Wait a bit for video to be ready
+      const timer = setTimeout(() => {
+        if (videoRef.current) {
+          karaoke
+            .connectVideo(videoRef.current)
+            .then(() => console.log("Video audio connected!"))
+            .catch((err) => console.error("Failed to connect video:", err));
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+
+    return () => {
+      karaoke.disconnectVideo();
+    };
+  }, [videoUrl]);
+
+useEffect(() => {
+  const getDevices = async () => {
+    try {
+      // ✅ Step 1: Request permission to access the mic
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // ✅ Step 2: Then list all devices
+      const allDevices = await navigator.mediaDevices.enumerateDevices();
+      const audioDevices = allDevices.filter(d => d.kind === "audioinput");
+
+      setDevices(audioDevices);
+      if (audioDevices.length > 0) {
+        setSelectedMicrophone(audioDevices[0].deviceId);
+      }
+    } catch (error) {
+      console.error("Error getting audio devices:", error);
+    }
+  };
+
+  getDevices();
+  }, [karaoke.audioAnalyzer]);
+
   return (
     <div className="min-h-screen bg-black relative overflow-hidden">
       {/* K-pop Demon Hunter Animated Background with Moon and Characters */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* Dark mystical energy waves */}
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-red-950 via-black to-purple-950 opacity-60"></div>
-        
+
         {/* Floating demon energy orbs */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-pulse" style={{ animationDuration: '3s' }}></div>
         <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-25 animate-pulse" style={{ animationDelay: '1s', animationDuration: '4s' }}></div>
@@ -107,14 +159,14 @@ function App() {
         </div>
       
       */}
-</div>
-      <div className="min-h-screen container mx-auto px-4 relative z-10 flex flex-col items-center justify-center">
+      </div>
+      <div className="container mx-auto py-12 px-4 relative z-10">
         {/* Header - K-pop Demon Hunter Style */}
         { ! showMissionSelect && <div className="text-center mb-12">
           <div className="inline-block mb-4 relative">
             {/* Glowing aura behind title */}
             <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 blur-3xl opacity-50 animate-pulse"></div>
-            
+
             <div className="relative">
               <h1 className="text-8xl text-wrap w-160 font-black mb-2 relative">
                 <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
@@ -132,7 +184,8 @@ function App() {
             </div>
           </div>
           <p className="text-xl text-red-200/80 max-w-2xl mx-auto font-medium">
-            Train like a K-pop demon hunter! Master the choreography and banish bad moves to the shadow realm!
+            Train like a K-pop demon hunter! Master the choreography and banish
+            bad moves to the shadow realm!
           </p>
         </div>}
 
@@ -168,22 +221,66 @@ function App() {
                 {/* Mystical portal icon */}
                 <div className="relative mb-6">
                   <div className="w-24 h-24 mx-auto mb-4 relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-full animate-spin opacity-20" style={{ animationDuration: '3s' }}></div>
-                    <div className="absolute inset-2 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-full animate-spin opacity-30" style={{ animationDuration: '2s', animationDirection: 'reverse' }}></div>
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 rounded-full animate-spin opacity-20"
+                      style={{ animationDuration: "3s" }}
+                    ></div>
+                    <div
+                      className="absolute inset-2 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-full animate-spin opacity-30"
+                      style={{
+                        animationDuration: "2s",
+                        animationDirection: "reverse",
+                      }}
+                    ></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <svg className="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <svg
+                        className="w-16 h-16 text-red-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                        />
                       </svg>
                     </div>
                   </div>
                 </div>
-                
+
                 <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-purple-300 to-pink-300 mb-4">
                   CHOOSE YOUR MISSION
                 </h2>
                 <p className="text-red-200/70 text-lg mb-8">
-                  Select a pre-loaded mission or upload your own choreography video
+                  Select a pre-loaded mission or upload your own choreography
+                  video
                 </p>
+
+                <div className="mb-8">
+                  <label className="block text-red-300 font-bold mb-3 text-lg">
+                    🎤 SELECT YOUR MICROPHONE
+                  </label>
+                  <select
+                    value={selectedMicrophone}
+                    onChange={(e) => setSelectedMicrophone(e.target.value)}
+                    className="w-full max-w-md mx-auto bg-black/50 border-2 border-red-500/50 rounded-xl px-4 py-3 text-white font-medium focus:outline-none focus:border-red-400 transition-colors"
+                  >
+                    {devices.length === 0 ? (
+                      <option>Loading microphones...</option>
+                    ) : (
+                      devices.map((device) => (
+                        <option key={device.deviceId} value={device.deviceId}>
+                          {device.label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <p className="text-red-300/50 text-sm mt-2 text-center">
+                    Required for vocal scoring
+                  </p>
+                </div>
 
                 {/* Dual Button Layout */}
                 <div className="flex gap-6 justify-center items-center flex-wrap">
@@ -196,10 +293,20 @@ function App() {
                     <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-75 group-hover/btn:opacity-100 transition duration-300"></div>
 
                     <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 hover:from-purple-500 hover:via-pink-500 hover:to-purple-500 text-white font-black py-5 px-12 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 flex items-center gap-3 text-xl border-2 border-purple-400/30">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 10V3L4 14h7v7l9-11h-7z"
+                        />
                       </svg>
-                      <span>CHOOSE DIFFICULTY</span>
+                      <span>CHOOSE MODE</span>
                     </div>
                   </button>
 
@@ -213,10 +320,20 @@ function App() {
                   >
                     {/* Button glow effect */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-purple-600 rounded-xl blur opacity-75 group-hover/btn:opacity-100 transition duration-300"></div>
-                    
+
                     <div className="relative bg-gradient-to-r from-red-600 via-purple-600 to-pink-600 hover:from-red-500 hover:via-purple-500 hover:to-pink-500 text-white font-black py-5 px-20 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl hover:scale-110 flex items-center gap-3 text-xl border-2 border-red-400/30">
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
                       </svg>
                       <span>UPLOAD VIDEO</span>
                     </div>
@@ -261,6 +378,8 @@ function App() {
             referenceVideoUrl={videoUrl}
             onChangeVideo={() => setVideoUrl(null)}
             gameMode={selectedMode}
+            karaoke={karaoke}
+            selectedMicrophone={selectedMicrophone}
           />
         )}
       </div>
@@ -380,13 +499,15 @@ function App() {
               <div className="grid md:grid-cols-3 gap-6">
                 {/* Easy */}
                 <button
-                  onClick={() => handleDifficultySelect('easy')}
+                  onClick={() => handleDifficultySelect("easy")}
                   className="group relative"
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
                   <div className="relative bg-gradient-to-br from-gray-900 to-green-950 rounded-2xl p-8 border-2 border-green-500/50 hover:border-green-400 transition-all duration-300 hover:scale-105 shadow-xl">
                     <div className="text-6xl mb-4 text-center">🌱</div>
-                    <h3 className="text-3xl font-black text-green-400 mb-2 text-center">EASY</h3>
+                    <h3 className="text-3xl font-black text-green-400 mb-2 text-center">
+                      EASY
+                    </h3>
                     <p className="text-green-200/70 text-center text-sm mb-4">
                       Perfect for beginners
                     </p>
@@ -400,13 +521,15 @@ function App() {
 
                 {/* Medium */}
                 <button
-                  onClick={() => handleDifficultySelect('medium')}
+                  onClick={() => handleDifficultySelect("medium")}
                   className="group relative"
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
                   <div className="relative bg-gradient-to-br from-gray-900 to-orange-950 rounded-2xl p-8 border-2 border-orange-500/50 hover:border-orange-400 transition-all duration-300 hover:scale-105 shadow-xl">
                     <div className="text-6xl mb-4 text-center">⚡</div>
-                    <h3 className="text-3xl font-black text-orange-400 mb-2 text-center">MEDIUM</h3>
+                    <h3 className="text-3xl font-black text-orange-400 mb-2 text-center">
+                      MEDIUM
+                    </h3>
                     <p className="text-orange-200/70 text-center text-sm mb-4">
                       A balanced challenge
                     </p>
@@ -420,13 +543,15 @@ function App() {
 
                 {/* Hard */}
                 <button
-                  onClick={() => handleDifficultySelect('hard')}
+                  onClick={() => handleDifficultySelect("hard")}
                   className="group relative"
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-red-600 to-rose-600 rounded-2xl blur opacity-50 group-hover:opacity-100 transition duration-300"></div>
                   <div className="relative bg-gradient-to-br from-gray-900 to-red-950 rounded-2xl p-8 border-2 border-red-500/50 hover:border-red-400 transition-all duration-300 hover:scale-105 shadow-xl">
                     <div className="text-6xl mb-4 text-center">🔥</div>
-                    <h3 className="text-3xl font-black text-red-400 mb-2 text-center">HARD</h3>
+                    <h3 className="text-3xl font-black text-red-400 mb-2 text-center">
+                      HARD
+                    </h3>
                     <p className="text-red-200/70 text-center text-sm mb-4">
                       For elite hunters
                     </p>

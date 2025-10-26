@@ -77,7 +77,7 @@ export function calculateSimilarity(
   const avgWeightedDistance = totalWeightedDistance / totalWeight;
 
   // Convert distance to similarity (0-1, where 1 is identical)
-  const similarity = Math.max(0, 1 - avgWeightedDistance * 0.8);
+  const similarity = Math.max(0, 1 - avgWeightedDistance * 0.6);
 
   return similarity;
 }
