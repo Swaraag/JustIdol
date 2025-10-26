@@ -252,9 +252,10 @@ function App() {
                 <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-red-950/50 to-purple-950/50 border border-red-700/30">
                   <p className="text-center text-red-300 font-bold mb-2">HUNTER RANKS</p>
                   <div className="flex justify-center gap-6 text-sm">
-                    <span className="text-red-400 font-bold">80%+ = S-RANK HUNTER</span>
-                    <span className="text-purple-400 font-bold">60%+ = A-RANK HUNTER</span>
                     <span className="text-pink-400 font-bold">&lt;60% = TRAINEE HUNTER</span>
+                    <span className="text-purple-400 font-bold">60%+ = A-RANK HUNTER</span>
+                    <span className="text-red-400 font-bold">80%+ = S-RANK HUNTER</span>
+                    
                   </div>
                 </div>
               </div>
