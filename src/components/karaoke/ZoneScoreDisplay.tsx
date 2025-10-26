@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Trophy, TrendingUp, Activity } from 'lucide-react';
-import { ZoneScoreData, ZoneScoringSystem } from '../../lib/zoneScoring.ts';
+import { ZoneScoreData, ZoneScoringSystem } from '../lib/zoneScoring';
 
 interface ZoneScoreDisplayProps {
   zoneScoringSystem: ZoneScoringSystem | null;

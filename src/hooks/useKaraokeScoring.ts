@@ -37,6 +37,8 @@ export function useKaraokeScoring(): KaraokeScoringHookResult {
   const [videoPitch, setVideoPitch] = useState(0);
   const [karaokeScore, setKaraokeScore] = useState<KaraokeScore | null>(null);
   const [zoneScore, setZoneScore] = useState<ZoneScoreData | null>(null);
+  const [micAnalyser, setMicAnalyser] = useState<AnalyserNode | null>(null);
+  const [videoAnalyser, setVideoAnalyser] = useState<AnalyserNode | null>(null);
 
   // Initialize audio analyzer on mount
   useEffect(() => {
@@ -46,6 +48,27 @@ export function useKaraokeScoring(): KaraokeScoringHookResult {
       audioAnalyzerRef.current?.cleanup();
     };
   }, []);
+
+  // Update analyser references for visualizers
+  useEffect(() => {
+    const checkAnalysers = () => {
+      if (audioAnalyzerRef.current) {
+        const newMicAnalyser = audioAnalyzerRef.current.getAnalyser();
+        const newVideoAnalyser = audioAnalyzerRef.current.getReferenceAnalyser();
+        
+        if (newMicAnalyser !== micAnalyser) {
+          setMicAnalyser(newMicAnalyser);
+        }
+        if (newVideoAnalyser !== videoAnalyser) {
+          setVideoAnalyser(newVideoAnalyser);
+        }
+      }
+    };
+
+    const interval = setInterval(checkAnalysers, 100);
+    
+    return () => clearInterval(interval);
+  }, [micAnalyser, videoAnalyser]);
 
   // Continuous pitch monitoring (runs every 100ms)
   useEffect(() => {
@@ -192,7 +215,7 @@ export function useKaraokeScoring(): KaraokeScoringHookResult {
     connectVideo,
     disconnectVideo,
     reset,
-    micAnalyser: audioAnalyzerRef.current?.getAnalyser() || null,
-    videoAnalyser: audioAnalyzerRef.current?.getReferenceAnalyser() || null,
+    micAnalyser,
+    videoAnalyser,
   };
 }

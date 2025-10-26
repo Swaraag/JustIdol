@@ -242,8 +242,8 @@ export function analyzePitchPerformance(
   const pitchAccuracy = validComparisons > 0 ? totalPitchAccuracy / validComparisons : 0;
   
   // Calculate timing accuracy (simplified - based on pitch changes)
-  const referenceOnsets = detectOnsets(referenceFrames);
-  const userOnsets = detectOnsets(userFrames);
+  const referenceOnsets = this.detectOnsets(referenceFrames);
+  const userOnsets = this.detectOnsets(userFrames);
   const timingAccuracy = calculateTimingAccuracy(referenceOnsets, userOnsets);
   
   // Calculate vocal stability

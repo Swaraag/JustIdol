@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
 import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
 import { KaraokeScoringHookResult } from "../hooks/useKaraokeScoring.ts";
+import AudioVisualizer from "./karaoke/AudioVisualizer.tsx";
 
 interface PoseComparisonProps {
   referenceVideoUrl: string;
@@ -270,27 +271,50 @@ export default function PoseComparison({
     };
   }, []);
 
-  // Connect video audio when video ref is ready
+  // Connect video audio when video is loaded and ready
   useEffect(() => {
-    if (videoRef.current && referenceVideoUrl) {
-      const timer = setTimeout(() => {
-        if (videoRef.current) {
-          karaoke
-            .connectVideo(videoRef.current)
-            .then(() => console.log("Video audio connected for karaoke!"))
-            .catch((err) =>
-              console.error("Failed to connect video audio:", err)
-            );
-        }
-      }, 500);
+    if (!videoRef.current || !referenceVideoUrl) return;
 
-      return () => clearTimeout(timer);
+    const video = videoRef.current;
+    console.log("🎥 Setting up video audio connection...");
+
+    const handleCanPlay = async () => {
+      try {
+        console.log("🎵 Video ready, connecting audio...");
+        await karaoke.connectVideo(video);
+        console.log("✅ Video audio connected for karaoke!");
+      } catch (err) {
+        console.error("❌ Failed to connect video audio:", err);
+      }
+    };
+
+    const handleLoadedData = async () => {
+      try {
+        console.log("📊 Video data loaded, connecting audio...");
+        await karaoke.connectVideo(video);
+        console.log("✅ Video audio connected!");
+      } catch (err) {
+        console.error("❌ Failed to connect video audio:", err);
+      }
+    };
+
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('loadeddata', handleLoadedData);
+
+    // Also try to connect immediately if video is already ready
+    if (video.readyState >= 2) {
+      console.log("🎬 Video already ready, connecting immediately...");
+      handleCanPlay();
     }
 
     return () => {
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('loadeddata', handleLoadedData);
       karaoke.disconnectVideo();
+      console.log("🔌 Video audio disconnected");
     };
-  }, [referenceVideoUrl, karaoke]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referenceVideoUrl]);
 
   // Calculate combined score (dance + vocal)
   useEffect(() => {
@@ -473,6 +497,19 @@ export default function PoseComparison({
         handleLoadedMetadata();
       }
 
+      // Enable audio for the video
+      video.muted = false;
+      video.volume = 1.0;
+      
+      console.log("🎬 Starting video, ensuring audio is connected...");
+
+      // Ensure video audio is connected
+      karaoke.connectVideo(video).then(() => {
+        console.log("✅ Video audio reconnected on start");
+      }).catch((err) => {
+        console.error("❌ Failed to connect video audio on start:", err);
+      });
+
       // Only reset and play if video is paused
       video.currentTime = 0;
       video.play().catch((err) => {
@@ -608,6 +645,7 @@ export default function PoseComparison({
           src={referenceVideoUrl}
           className="hidden"
           playsInline
+          crossOrigin="anonymous"
         />
         <canvas
           ref={videoCanvasRef}
@@ -661,6 +699,31 @@ export default function PoseComparison({
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Debug Audio Visualizers */}
+      <div className="absolute bottom-8 left-8 z-10 flex gap-4">
+        {/* User Microphone Audio Visualizer */}
+        <div className="bg-black/90 backdrop-blur-sm border-2 border-green-500/50 rounded-xl p-4 shadow-2xl">
+          <p className="text-xs font-black text-green-400 mb-2 text-center">USER MIC</p>
+          <AudioVisualizer
+            analyser={karaoke.micAnalyser}
+            isActive={karaoke.isRecording}
+            type="both"
+            className="w-80"
+          />
+        </div>
+
+        {/* Video Reference Audio Visualizer */}
+        <div className="bg-black/90 backdrop-blur-sm border-2 border-blue-500/50 rounded-xl p-4 shadow-2xl">
+          <p className="text-xs font-black text-blue-400 mb-2 text-center">VIDEO AUDIO</p>
+          <AudioVisualizer
+            analyser={karaoke.videoAnalyser}
+            isActive={isVideoPlaying}
+            type="both"
+            className="w-80"
+          />
         </div>
       </div>
 
