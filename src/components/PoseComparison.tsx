@@ -334,7 +334,7 @@ export default function PoseComparison({
                 webcamLandmarksBufferRef.current
               );
 
-              drawPoseLandmarks(ctx, landmarks, "#00FF00", "#FF0000");
+              drawPoseLandmarks(ctx, landmarks, "#f20bf2ff", "#7b00ffff");
 
               // Calculate similarity if reference landmarks exist
               if (referenceLandmarksRef.current) {
@@ -403,7 +403,7 @@ export default function PoseComparison({
                 videoLandmarksBufferRef.current
               );
 
-              drawPoseLandmarks(ctx, landmarks, "#0000FF", "#FFFF00");
+              drawPoseLandmarks(ctx, landmarks, "#df0043ff", "#800080");
               referenceLandmarksRef.current = landmarks;
             }
 
@@ -869,7 +869,7 @@ export default function PoseComparison({
                       </svg>
                     ) : finalScore > 0.6 ? (
                       <svg
-                        className="w-24 h-24 mx-auto text-purple-400"
+                        className="w-24 h-24 mx-auto text-red-400"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -877,7 +877,7 @@ export default function PoseComparison({
                       </svg>
                     ) : (
                       <svg
-                        className="w-24 h-24 mx-auto text-gray-400"
+                        className="w-24 h-24 mx-auto text-red-400"
                         fill="currentColor"
                         viewBox="0 0 24 24"
                       >
@@ -887,25 +887,14 @@ export default function PoseComparison({
                   </div>
                   <div className="text-9xl font-black mb-2">
                     <span
-                      className={`bg-gradient-to-r ${
-                        finalScore > 0.8
-                          ? "from-red-400 via-pink-400 to-red-400"
-                          : finalScore > 0.6
-                          ? "from-purple-400 via-pink-400 to-purple-400"
-                          : "from-gray-400 via-red-400 to-gray-400"
-                      } bg-clip-text text-transparent`}
+                      className={`bg-gradient-to-r from-red-400 via-pink-400 to-red-400 bg-clip-text text-transparent`}
                     >
                       {(finalScore * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div
-                    className={`text-3xl font-black ${
-                      finalScore > 0.8
-                        ? "text-red-400"
-                        : finalScore > 0.6
-                        ? "text-purple-400"
-                        : "text-gray-400"
-                    }`}
+                    className={`text-3xl font-black text-red-400
+                    `}
                   >
                     {finalScore > 0.8
                       ? "S-RANK HUNTER"
