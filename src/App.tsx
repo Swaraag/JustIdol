@@ -64,7 +64,7 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
         
         {/* Large Moon in Background - Top Right */}
-        <div className="absolute -top-[-100] left-30 opacity-10 animate-pulse" style={{ animationDuration: '6s' }}>
+        <div className="absolute -top-0 left-30 opacity-10 animate-pulse" style={{ animationDuration: '6s' }}>
           <img 
             src="/images/honmoon.png" 
             alt="" 

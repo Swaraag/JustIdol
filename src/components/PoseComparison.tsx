@@ -506,20 +506,14 @@ export default function PoseComparison({
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '4s' }}></div>
         
         {/* Fading K-pop performer silhouettes */}
-        <div className="absolute top-10 right-10 opacity-5 animate-pulse" style={{ animationDuration: '4s' }}>
+        <div className="absolute top-28 left-265 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
           <img 
-            src="https://images.unsplash.com/photo-1618331835717-801e976710b2?w=300&h=450&fit=crop&auto=format" 
+            src="/images/demon-hunter.png" 
             alt="" 
-            className="w-48 h-72 object-cover mix-blend-lighten filter grayscale"
+            className="w-140 h-100 object-contain"
           />
         </div>
-        <div className="absolute bottom-10 left-10 opacity-5 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}>
-          <img 
-            src="https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=300&h=450&fit=crop&auto=format" 
-            alt="" 
-            className="w-44 h-66 object-cover mix-blend-lighten filter grayscale"
-          />
-        </div>
+
       </div>
 
       {/* Fullscreen Reference Video */}
@@ -710,20 +704,20 @@ export default function PoseComparison({
         <div className="absolute inset-0 bg-gradient-to-br from-black via-red-950/95 to-purple-950/95 backdrop-blur-xl flex items-center justify-center z-30">
           {/* Background character images */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 right-1/4 opacity-5 animate-pulse" style={{ animationDuration: '3s' }}>
-              <img 
-                src="https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=600&fit=crop&auto=format" 
-                alt="" 
-                className="w-64 h-96 object-cover mix-blend-lighten filter grayscale"
-              />
-            </div>
-            <div className="absolute bottom-1/4 left-1/4 opacity-5 animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '4s' }}>
-              <img 
-                src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop&auto=format" 
-                alt="" 
-                className="w-64 h-96 object-cover mix-blend-lighten filter grayscale"
-              />
-            </div>
+            <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
+          <img 
+            src="/images/demon.png" 
+            alt="" 
+            className="w-280 h-200 object-contain"
+          />
+        </div>
+            <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
+          <img 
+            src="/images/demon.png" 
+            alt="" 
+            className="w-280 h-200 object-contain"
+          />
+        </div>
           </div>
 
           <div className="text-center max-w-4xl px-8 relative z-10">
