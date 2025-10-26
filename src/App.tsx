@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import PoseComparison from "./components/PoseComparison";
 
 type Difficulty = 'easy' | 'medium' | 'hard' | null;
