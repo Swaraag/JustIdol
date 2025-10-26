@@ -64,22 +64,23 @@ function App() {
         <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-pink-500 rounded-full mix-blend-screen filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}></div>
         
         {/* Large Moon in Background - Top Right */}
-        <div className="absolute -top-32 -right-32 opacity-10 animate-pulse" style={{ animationDuration: '6s' }}>
+        <div className="absolute -top-[-100] left-30 opacity-10 animate-pulse" style={{ animationDuration: '6s' }}>
           <img 
-            src="/images/moon.png" 
+            src="/images/honmoon.png" 
             alt="" 
-            className="w-[600px] h-[600px] object-contain"
+            className="w-[1200px] h-[1200px] object-contain"
           />
         </div>
 
         {/* Fading K-pop Demon Hunter Characters */}
-        <div className="absolute top-20 right-20 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
+        <div className="absolute top-0 left-80 opacity-15 animate-pulse" style={{ animationDuration: '4s' }}>
           <img 
-            src="/images/demon-hunter.png" 
+            src="/images/demon.png" 
             alt="" 
-            className="w-64 h-96 object-contain"
+            className="w-280 h-200 object-contain"
           />
         </div>
+        {/*
         <div className="absolute bottom-40 left-20 opacity-10 animate-pulse" style={{ animationDelay: '2s', animationDuration: '5s' }}>
           <img 
             src="/images/demon-hunter.png" 
@@ -101,8 +102,9 @@ function App() {
             className="w-60 h-90 object-contain transform scale-x-[-1]"
           />
         </div>
-      </div>
-
+      
+      */}
+</div>
       <div className="container mx-auto py-12 px-4 relative z-10">
         {/* Header - K-pop Demon Hunter Style */}
         <div className="text-center mb-12">
@@ -115,7 +117,7 @@ function App() {
                 <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-sm">
                   JUST IDOL
                 </span>
-                <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
+                <span className="relative text-transparent bg-clip-text bg-gradient-to-b from-red-100 via-purple-4900 to-pink-400">
                   JUST IDOL
                 </span>
               </h1>
