@@ -73,6 +73,8 @@ export default function PoseComparison({
   const [isFinished, setIsFinished] = useState(false);
   const [finalScore, setFinalScore] = useState(0);
   const [combinedScore, setCombinedScore] = useState(0);
+  const [finalCombinedScore, setFinalCombinedScore] = useState(0);
+  const [finalVocalScore, setFinalVocalScore] = useState(0);
   const [videoDimensions, setVideoDimensions] = useState({
     width: 640,
     height: 480,
@@ -83,6 +85,7 @@ export default function PoseComparison({
   });
 
   const scoreHistoryRef = useRef<number[]>([]);
+  const finalZoneScoreRef = useRef<any>(null); // Store final zone score before cleanup
 
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
@@ -316,11 +319,15 @@ export default function PoseComparison({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [referenceVideoUrl]);
 
-  // Calculate combined score (dance + vocal)
+  // Calculate combined score (dance + vocal) - use cumulative score for average of all singing
   useEffect(() => {
     if (karaoke.zoneScore && isStarted) {
+      // Store the zone score in a ref so we can access it even after recording stops
+      finalZoneScoreRef.current = karaoke.zoneScore;
+      
       const danceScore = similarity * 100;
-      const vocalScore = karaoke.zoneScore.totalScore;
+      // Use cumulativeScore for average of entire performance
+      const vocalScore = karaoke.zoneScore.cumulativeScore || 0;
 
       // 50/50 split
       const combined = Math.round((danceScore + vocalScore) / 2);
@@ -339,7 +346,7 @@ export default function PoseComparison({
       if (selectedMicrophone) {
         try {
           await karaoke.startRecording(selectedMicrophone);
-          console.log("Karaoke recording started!");
+          console.log("🎤 Karaoke recording started!");
         } catch (error) {
           console.error("Failed to start karaoke recording:", error);
         }
@@ -347,6 +354,20 @@ export default function PoseComparison({
     };
 
     startKaraoke();
+    
+    // Monitor recording progress every 2 seconds
+    const progressInterval = setInterval(() => {
+      if (karaoke.isRecording) {
+        console.log("🎤 Recording Progress:", {
+          isRecording: karaoke.isRecording,
+          hasZoneScore: !!karaoke.zoneScore,
+          cumulativeScore: karaoke.zoneScore?.cumulativeScore || 0,
+          totalScore: karaoke.zoneScore?.totalScore || 0,
+          userNote: karaoke.userNote,
+          targetNote: karaoke.targetNote
+        });
+      }
+    }, 2000);
 
     const processWebcamFrame = () => {
       if (!shouldContinue) return;
@@ -478,16 +499,84 @@ export default function PoseComparison({
 
       // Handle video end
       const handleVideoEnded = () => {
-        // Calculate final score from history
+        console.log("🎬 Video ended, capturing final scores...");
+        
+        // Calculate final dance score from history
+        let finalDanceScore = 0;
         if (scoreHistoryRef.current.length > 0) {
           const average =
             scoreHistoryRef.current.reduce((a, b) => a + b, 0) /
             scoreHistoryRef.current.length;
+          finalDanceScore = average;
           setFinalScore(average);
-        } else {
-          setFinalScore(0);
         }
+        
+        // Get zone score - try current first, fall back to stored ref
+        let zoneScore = karaoke.zoneScore;
+        if (!zoneScore) {
+          zoneScore = finalZoneScoreRef.current;
+          console.log("⚠️ Using stored zone score from ref (karaoke.zoneScore was null)");
+        }
+        
+        console.log("📊 Current karaoke state:", {
+          isRecording: karaoke.isRecording,
+          hasZoneScore: !!zoneScore,
+          zoneScore: zoneScore
+        });
+        
+        console.log("🎤 ZoneScore details:", {
+          exists: !!zoneScore,
+          cumulativeScore: zoneScore?.cumulativeScore,
+          totalScore: zoneScore?.totalScore,
+          perfectZone: zoneScore?.perfectZone,
+          greatZone: zoneScore?.greatZone,
+          allProperties: zoneScore ? Object.keys(zoneScore) : []
+        });
+        
+        // Get final vocal score - prioritize cumulative (full performance average)
+        let finalVocal = 0;
+        if (zoneScore) {
+          // Use cumulativeScore if available and not 0, otherwise fall back to totalScore
+          if (zoneScore.cumulativeScore !== undefined && zoneScore.cumulativeScore > 0) {
+            finalVocal = zoneScore.cumulativeScore;
+          } else if (zoneScore.totalScore !== undefined && zoneScore.totalScore > 0) {
+            finalVocal = zoneScore.totalScore;
+          } else {
+            // Last resort: calculate from zone percentages
+            const zoneTotal = (zoneScore.perfectZone || 0) + (zoneScore.greatZone || 0) + 
+                             (zoneScore.keepTryingZone || 0);
+            if (zoneTotal > 0) {
+              finalVocal = Math.round(zoneTotal * 100); // Percentage of time in good zones
+            }
+          }
+        }
+        
+        console.log("🎯 Final vocal score determined:", finalVocal);
+        setFinalVocalScore(finalVocal);
+        
+        // Calculate final combined score (dance is 0-1, needs to be converted to 0-100)
+        const finalCombined = Math.round((finalDanceScore * 100 + finalVocal) / 2);
+        setFinalCombinedScore(finalCombined);
+        
+        console.log("🎯 Final Scores Calculated:", {
+          dance: finalDanceScore,
+          dancePercent: (finalDanceScore * 100).toFixed(2),
+          vocal: finalVocal,
+          vocalPercent: finalVocal.toFixed(2),
+          combined: finalCombined,
+          zoneScoreExists: !!zoneScore,
+          cumulativeScore: zoneScore?.cumulativeScore,
+          totalScore: zoneScore?.totalScore
+        });
+        
+        // Mark as finished first
         setIsFinished(true);
+        
+        // Stop recording AFTER setting isFinished - this allows isRecording to be false
+        // but we've already captured the scores from the ref
+        setTimeout(() => {
+          karaoke.stopRecording();
+        }, 100);
       };
 
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -522,9 +611,15 @@ export default function PoseComparison({
 
     return () => {
       shouldContinue = false;
+      
+      // Clear progress monitoring interval
+      clearInterval(progressInterval);
 
-      // Stop karaoke recording when dance stops
-      karaoke.stopRecording();
+      // DON'T stop recording here if video hasn't ended - let handleVideoEnded do it
+      // If user manually stopped, then stop recording
+      if (!videoRef.current?.ended) {
+        karaoke.stopRecording();
+      }
 
       // Pause the reference video when stopped
       if (videoRef.current) {
@@ -560,7 +655,10 @@ export default function PoseComparison({
     setSimilarity(0);
     setFinalScore(0);
     setCombinedScore(0);
+    setFinalCombinedScore(0);
+    setFinalVocalScore(0);
     scoreHistoryRef.current = [];
+    finalZoneScoreRef.current = null;
     referenceLandmarksRef.current = null;
     karaoke.reset();
 
@@ -975,7 +1073,7 @@ export default function PoseComparison({
                 <div className="relative bg-gradient-to-br from-gray-900 via-red-950 to-purple-950 border-4 border-red-500/50 rounded-3xl px-16 py-10 shadow-2xl">
                   {/* Rank icon */}
                   <div className="mb-4">
-                    {combinedScore > 80 ? (
+                    {finalCombinedScore > 80 ? (
                       <svg
                         className="w-24 h-24 mx-auto text-red-400"
                         fill="currentColor"
@@ -983,7 +1081,7 @@ export default function PoseComparison({
                       >
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
-                    ) : combinedScore > 60 ? (
+                    ) : finalCombinedScore > 60 ? (
                       <svg
                         className="w-24 h-24 mx-auto text-purple-400"
                         fill="currentColor"
@@ -1006,14 +1104,14 @@ export default function PoseComparison({
                   <div className="text-9xl font-black mb-2">
                     <span
                       className={`bg-gradient-to-r ${
-                        combinedScore > 80
+                        finalCombinedScore > 80
                           ? "from-red-400 via-pink-400 to-red-400"
-                          : combinedScore > 60
+                          : finalCombinedScore > 60
                           ? "from-purple-400 via-pink-400 to-purple-400"
                           : "from-gray-400 via-red-400 to-gray-400"
                       } bg-clip-text text-transparent`}
                     >
-                      {combinedScore}%
+                      {finalCombinedScore}%
                     </span>
                   </div>
 
@@ -1033,23 +1131,23 @@ export default function PoseComparison({
                         VOCAL
                       </p>
                       <p className="text-3xl font-black text-pink-400">
-                        {karaoke.zoneScore ? karaoke.zoneScore.totalScore : 0}%
+                        {finalVocalScore}%
                       </p>
                     </div>
                   </div>
 
                   <div
                     className={`text-3xl font-black ${
-                      combinedScore > 80
+                      finalCombinedScore > 80
                         ? "text-red-400"
-                        : combinedScore > 60
+                        : finalCombinedScore > 60
                         ? "text-purple-400"
                         : "text-gray-400"
                     }`}
                   >
-                    {combinedScore > 80
+                    {finalCombinedScore > 80
                       ? "S-RANK HUNTER"
-                      : combinedScore > 60
+                      : finalCombinedScore > 60
                       ? "A-RANK HUNTER"
                       : "TRAINEE HUNTER"}
                   </div>
@@ -1057,17 +1155,17 @@ export default function PoseComparison({
               </div>
 
               <p className="text-4xl text-white font-black mb-3">
-                {combinedScore > 80
+                {finalCombinedScore > 80
                   ? "LEGENDARY PERFORMANCE!"
-                  : combinedScore > 60
+                  : finalCombinedScore > 60
                   ? "EXCELLENT TECHNIQUE!"
                   : "KEEP TRAINING!"}
               </p>
 
               <p className="text-xl text-red-200/80 mb-8 max-w-2xl mx-auto">
-                {combinedScore > 80
+                {finalCombinedScore > 80
                   ? "You've mastered both dance and vocals! Your movements are flawless and your voice is divine!"
-                  : combinedScore > 60
+                  : finalCombinedScore > 60
                   ? "Strong performance, Hunter! A few more training sessions and you'll reach S-Rank!"
                   : "Every legend starts somewhere! Keep training and you'll become a master demon hunter!"}
               </p>
@@ -1121,7 +1219,7 @@ export default function PoseComparison({
             </div>
 
             {/* Achievement unlocked message for S-Rank */}
-            {combinedScore > 80 && (
+            {finalCombinedScore > 80 && (
               <div className="mt-8 inline-block">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-yellow-600 to-orange-600 rounded-xl blur opacity-75 animate-pulse"></div>

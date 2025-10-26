@@ -104,8 +104,9 @@ export class ZoneScoringSystem {
       targetConfidence
     });
     
-    // Keep only last 10 seconds of data to prevent memory issues
-    const cutoffTime = timestamp - 10000; // 10 seconds ago
+    // Keep last 5 minutes of data to prevent memory issues on very long performances
+    // For typical 2-4 minute karaoke videos, this keeps all data
+    const cutoffTime = timestamp - 300000; // 5 minutes ago
     this.analysisHistory = this.analysisHistory.filter(frame => frame.timestamp > cutoffTime);
     
     // Debug logging (reduced frequency)
@@ -125,7 +126,7 @@ export class ZoneScoringSystem {
    */
   calculateInstantaneousScore(): number {
     if (this.analysisHistory.length === 0) {
-      return 80; // Default starting score
+      return 60; // Default starting score
     }
 
     // Get frames from the last 1 second (since we update every 500ms)
@@ -135,7 +136,7 @@ export class ZoneScoringSystem {
     );
 
     if (recentFrames.length === 0) {
-      return 80; // Default if no recent frames
+      return 60; // Default if no recent frames
     }
 
     // Calculate individual scores for recent frames and take average of 5
@@ -176,7 +177,7 @@ export class ZoneScoringSystem {
     while (individualScores.length < 5) {
       const avgScore = individualScores.length > 0 
         ? individualScores.reduce((sum, score) => sum + score, 0) / individualScores.length
-        : 80;
+        : 60;
       individualScores.push(Math.round(avgScore));
     }
 
@@ -291,35 +292,56 @@ export class ZoneScoringSystem {
       });
     }
 
-    // Much more generous cumulative scoring for easier 90s
+    // Lenient cumulative scoring - easier to get good scores
     let scoreAdjustment = 0;
     
-    // Extremely generous rewards for good performance
-    scoreAdjustment += perfectZone * 80;        // Up to +80 points for perfect (increased from 60)
-    scoreAdjustment += greatZone * 60;         // Up to +60 points for great (increased from 45)
-    scoreAdjustment += keepTryingZone * 10;     // +10 points for keep trying (was -2)
-    scoreAdjustment -= offPitchZone * 2;       // Only -2 points for off pitch (reduced penalty)
-    scoreAdjustment += skippedFrames * 2;      // +2 points for skipped frames (slight positive weight)
+    // More forgiving rewards based on accuracy zones
+    scoreAdjustment += perfectZone * 30;        // +30 points for perfect (<1.5 semitones off)
+    scoreAdjustment += greatZone * 20;          // +20 points for great (1.5-2.5 semitones off)
+    scoreAdjustment += keepTryingZone * 10;       // +10 points for keep trying (2.5-4 semitones off)
+    scoreAdjustment -= offPitchZone * 5;      // Only -5 points for off pitch (>4 semitones off)
+    scoreAdjustment -= skippedFrames * 2;      // Only -2 points per skipped frame
     scoreAdjustment += silenceReward * 5;      // +5 points for silence during instrumental
     
-    // Calculate final score (80 + adjustment, clamped to 0-100)
-    const baseScore = 80;
+    // Calculate final score (60 + adjustment, clamped to 0-100)
+    const baseScore = 60; // Higher starting score for easier scoring
     const rawScore = Math.min(100, Math.max(0, baseScore + scoreAdjustment));
     
     // Calculate instantaneous score for real-time display
     const instantaneousScore = this.calculateInstantaneousScore();
     
-    // Add instantaneous score to history for cumulative calculation
+    // Add instantaneous score to history for tracking
     this.instantaneousScoreHistory.push(instantaneousScore);
     if (this.instantaneousScoreHistory.length > 100) {
       this.instantaneousScoreHistory.shift(); // Keep last 100 instantaneous scores
     }
     
-    // Calculate cumulative score as true average of instantaneous scores
-    let cumulativeScore = 80; // Default starting score
+    // Calculate cumulative score as the average of ALL instantaneous scores so far
+    // This gives the true average across the entire performance, not just recent
+    let cumulativeScore = rawScore; // Default to raw score
+    
     if (this.instantaneousScoreHistory.length > 0) {
+      // Calculate average of ALL instantaneous scores from the entire performance
       const sum = this.instantaneousScoreHistory.reduce((total, score) => total + score, 0);
-      cumulativeScore = Math.round(sum / this.instantaneousScoreHistory.length);
+      const avgScore = sum / this.instantaneousScoreHistory.length;
+      cumulativeScore = Math.round(avgScore);
+      
+      console.log('Cumulative score calculated from ALL scores:', {
+        totalScores: this.instantaneousScoreHistory.length,
+        sum: sum.toFixed(2),
+        average: avgScore.toFixed(2),
+        rawScore: rawScore
+      });
+    }
+    
+    // Ensure cumulative score is never below a minimum if we have scoring data
+    if (rawScore > 0 && cumulativeScore === 0) {
+      cumulativeScore = rawScore; // Use raw score if cumulative somehow became 0
+    }
+    
+    // Minimum floor: if we have analysis history, give base score
+    if (this.analysisHistory.length > 0 && cumulativeScore === 0) {
+      cumulativeScore = 40; // Give a base score if there's any data
     }
 
     console.log('Score calculation:', {
@@ -331,9 +353,10 @@ export class ZoneScoringSystem {
       baseScore,
       rawScore: Math.round(rawScore),
       instantaneousScore,
-      cumulativeScore,
+      cumulativeScore: Math.round(cumulativeScore),
       instantaneousScoreHistoryLength: this.instantaneousScoreHistory.length,
-      recentInstantaneousScores: this.instantaneousScoreHistory.slice(-5).map(s => Math.round(s))
+      recentInstantaneousScores: this.instantaneousScoreHistory.slice(-5).map(s => Math.round(s)),
+      totalFrames: this.analysisHistory.length
     });
 
     const result = {
@@ -385,10 +408,11 @@ export class ZoneScoringSystem {
 
       totalTime += frameDuration;
       
-      // Track frames with very low confidence or no user pitch as "skipped" (more lenient)
-      if (frame.userConfidence < 0.01 || (frame.userPitch <= 0 && frame.volume < 0.01)) {
+      // Track frames as "skipped" ONLY if confidence is extremely low or completely silent
+      // Made much more lenient - only skip if truly no audio data at all
+      if (frame.userConfidence < 0.001 || (frame.userPitch <= 0 && frame.volume < 0.001)) {
         skippedTime += frameDuration;
-        if (i % 10 === 0) { // More frequent logging for debugging
+        if (i % 50 === 0) { // Log less frequently
           console.log(`SKIPPED frame ${i}: confidence=${frame.userConfidence}, pitch=${frame.userPitch}, volume=${frame.volume}`);
         }
         continue;
@@ -505,11 +529,11 @@ export class ZoneScoringSystem {
         });
       }
 
-      // Track frames with very low confidence as "skipped"
-      if (frame.userConfidence < 0.05) {
+      // Track frames as "skipped" ONLY with extremely low confidence (made very lenient)
+      if (frame.userConfidence < 0.001) {
         skippedTime += frameDuration;
-        if (i % 50 === 0) { // Only log every 50th skipped frame
-          console.log(`Skipped frame ${i} due to very low user confidence:`, frame.userConfidence);
+        if (i % 100 === 0) { // Only log every 100th skipped frame
+          console.log(`Skipped frame ${i} due to extremely low user confidence:`, frame.userConfidence);
         }
         continue;
       }
@@ -573,8 +597,8 @@ export class ZoneScoringSystem {
       offPitchZone: 0,
       skippedFrames: 0,
       silenceReward: 0,
-      totalScore: 80, // Instantaneous score starts at 80
-      cumulativeScore: 80, // Cumulative score starts at 80
+      totalScore: 60, // Instantaneous score starts at 60
+      cumulativeScore: 60, // Cumulative score starts at 60
       zoneBreakdown: {
         perfectTime: 0,
         greatTime: 0,

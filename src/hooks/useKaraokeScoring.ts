@@ -91,8 +91,8 @@ export function useKaraokeScoring(): KaraokeScoringHookResult {
 
       // Get video pitch (reference vocals)
       const videoPitchResult = audioAnalyzerRef.current.getReferencePitch();
-      const vocalActivity =
-        audioAnalyzerRef.current.getReferenceVocalActivity();
+      // vocalActivity detection is disabled - not reliable enough
+      // const vocalActivity = audioAnalyzerRef.current.getReferenceVocalActivity();
 
       if (videoPitchResult.frequency > 0) {
         setVideoPitch(videoPitchResult.frequency);
@@ -122,19 +122,21 @@ export function useKaraokeScoring(): KaraokeScoringHookResult {
 
       // Update zone scoring (only when recording)
       if (isRecording && audioAnalyzerRef.current) {
-        const userConfidence =
-          userPitchResult.frequency > 0 ? Math.min(1.0, userVolume * 2) : 0;
+        // Be more lenient with confidence - use volume directly (scaled) rather than requiring pitch
+        const userConfidence = Math.min(1.0, userVolume * 3); // More lenient: multiply by 3 instead of 2
         const targetConfidence =
           videoPitchResult.frequency > 0
             ? Math.min(1.0, videoPitchResult.confidence)
-            : 0;
+            : 0.5; // Give some confidence even if no pitch detected
 
+        // Don't mark frames as instrumental - always score them
+        // vocalActivity detection is unreliable and was marking everything as instrumental
         audioAnalyzerRef.current.addAnalysisFrameToZoneScoring(
           userPitchResult.frequency,
           videoPitchResult.frequency,
           Date.now(),
           userVolume,
-          !vocalActivity.isActive,
+          false, // Never mark as instrumental - always treat as scoring time
           userConfidence,
           targetConfidence
         );
