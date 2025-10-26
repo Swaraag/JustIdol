@@ -1,0 +1,9 @@
+# choosing between just singing, dance, and both
+***** I want the user to be able to choose between singing, dancing, or both. I envision the exact same screen as the "Easy, Medium, and Hard," except this one allows the user to "CHOOSE BETWEEN" "JUST SING," "JUST DANCE" and a different colored extra interesting "BOTH" button. This selection would go before the difficult choosing screen.
+# them being able to watch the video once before it becomes official
+# 3, 2, 1 countdown
+# put it in front of them, let them choose but guide them, and hten let them be able to demo themselves if htey want to
+# explaining how we built the program
+# choosing mission is the next step that you click into 
+# get points, get xp, gamify the process
+

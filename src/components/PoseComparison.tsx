@@ -572,7 +572,7 @@ export default function PoseComparison({
       </div>
 
       {/* Demon Hunter Control Panel */}
-      <div className="absolute top-8 left-8 z-10 flex gap-4">
+      <div className="absolute top-8 left-8 z-10">
         <button
           onClick={onChangeVideo}
           className="group relative px-6 py-3 rounded-xl bg-black/80 backdrop-blur-sm border-2 border-red-700/50 text-red-200 font-black hover:bg-red-950/50 hover:border-red-500 transition-all duration-300 shadow-lg hover:shadow-red-500/50 hover:scale-105"
@@ -584,7 +584,10 @@ export default function PoseComparison({
             RETREAT
           </span>
         </button>
+      </div>
 
+      {/* Start/Pause Button - Centered at Bottom */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
         {!isStarted ? (
           <button
             onClick={() => setIsStarted(true)}
@@ -601,7 +604,7 @@ export default function PoseComparison({
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                   </svg>
-                  <span>START HUNT</span>
+                  <span>START</span>
                 </>
               ) : (
                 <>
@@ -620,7 +623,7 @@ export default function PoseComparison({
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <rect x="6" y="6" width="12" height="12" />
               </svg>
-              END HUNT
+              PAUSE
             </span>
           </button>
         )}
