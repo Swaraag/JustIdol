@@ -1,6 +1,6 @@
 # put it in front of them, let them choose but guide them, and them let them be able to demo themselves if htey want to
 # explaining how we built the program
-# choosing mission is the next step that you click into 
+# choosing mission is the next step that you click into after clicking play on the main page
 # get points, get xp, gamify the process
 # make the Upload Video less important and more of an option if they want it
 # show a mention of the song before each of the easy, medium, difficulty option
