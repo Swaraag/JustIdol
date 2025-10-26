@@ -1,6 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { PoseLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
-import { calculateSimilarity, normalizeLandmarks } from "../utils/poseUtils";
+import {
+  calculateSimilarityWithMovement,
+  normalizeLandmarks,
+} from "../utils/poseUtils";
 
 interface PoseComparisonProps {
   referenceVideoUrl: string;
@@ -77,12 +80,15 @@ export default function PoseComparison({
   });
 
   const scoreHistoryRef = useRef<number[]>([]);
+  const recentScoresRef = useRef<number[]>([]); // Rolling window for display
 
   const poseLandmarkerRef = useRef<PoseLandmarker | null>(null);
   const animationFrameIdRef = useRef<number | null>(null);
   const videoAnimationFrameIdRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const referenceLandmarksRef = useRef<any[] | null>(null);
+  const previousWebcamLandmarksRef = useRef<any[] | null>(null);
+  const previousReferenceLandmarksRef = useRef<any[] | null>(null);
   const lastWebcamTimeRef = useRef<number>(-1);
   const lastVideoTimeRef = useRef<number>(-1);
 
@@ -330,12 +336,64 @@ export default function PoseComparison({
                 const normalized2 = normalizeLandmarks(
                   referenceLandmarksRef.current,
                 );
-                const score = calculateSimilarity(normalized1, normalized2);
-                setSimilarity(score);
+                const prevNormalized1 = previousWebcamLandmarksRef.current
+                  ? normalizeLandmarks(previousWebcamLandmarksRef.current)
+                  : null;
+                const prevNormalized2 = previousReferenceLandmarksRef.current
+                  ? normalizeLandmarks(previousReferenceLandmarksRef.current)
+                  : null;
+
+                // Calculate score with movement penalty
+                const score =
+                  0.5 +
+                  0.5 *
+                    calculateSimilarityWithMovement(
+                      normalized1,
+                      prevNormalized1,
+                      normalized2,
+                      prevNormalized2,
+                    );
 
                 // Track score for final average
                 scoreHistoryRef.current.push(score);
+
+                // Add to rolling window for display (last 45 frames)
+                recentScoresRef.current.push(score);
+                if (recentScoresRef.current.length > 45) {
+                  recentScoresRef.current.shift(); // Remove oldest score
+                }
+
+                // Calculate average of recent scores
+                const avgScore =
+                  recentScoresRef.current.reduce((a, b) => a + b, 0) /
+                  recentScoresRef.current.length;
+
+                setSimilarity(avgScore);
+
+                // Store current landmarks as previous for next frame
+                previousWebcamLandmarksRef.current = landmarks;
               }
+            } else {
+              // No landmarks detected - set score to 0
+              const score = 0;
+
+              // Track score for final average
+              scoreHistoryRef.current.push(score);
+
+              // Add to rolling window for display (last 45 frames)
+              recentScoresRef.current.push(score);
+              if (recentScoresRef.current.length > 45) {
+                recentScoresRef.current.shift();
+              }
+
+              // Calculate average of recent scores
+              const avgScore =
+                recentScoresRef.current.reduce((a, b) => a + b, 0) /
+                recentScoresRef.current.length;
+
+              // Scale to 35-100% range: 35% base + 65% of actual score
+              const displayScore = 0.35 + avgScore * 0.65;
+              setSimilarity(displayScore);
             }
 
             ctx.restore();
@@ -392,6 +450,10 @@ export default function PoseComparison({
               );
 
               drawPoseLandmarks(ctx, landmarks, "#0000FF", "#FFFF00");
+
+              // Store previous reference landmarks before updating
+              previousReferenceLandmarksRef.current =
+                referenceLandmarksRef.current;
               referenceLandmarksRef.current = landmarks;
             }
 
@@ -464,6 +526,13 @@ export default function PoseComparison({
       lastVideoTimeRef.current = -1;
       webcamLandmarksBufferRef.current = [];
       videoLandmarksBufferRef.current = [];
+
+      // Reset movement tracking
+      previousWebcamLandmarksRef.current = null;
+      previousReferenceLandmarksRef.current = null;
+
+      // Reset rolling average window
+      recentScoresRef.current = [];
     };
   }, [isStarted, drawPoseLandmarks, smoothLandmarks]);
 

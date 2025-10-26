@@ -23,51 +23,61 @@ export function normalizeLandmarks(landmarks: any[]) {
   }));
 }
 
-// Calculate similarity between two pose landmarks
+// Calculate similarity between two pose landmarks with weighted scoring
 export function calculateSimilarity(
   landmarks1: any[] | null,
   landmarks2: any[] | null,
 ): number {
   if (!landmarks1 || !landmarks2) return 0;
 
-  // Use important body keypoints (exclude face landmarks for better body focus)
-  const importantIndices = [
-    11,
-    12, // shoulders
-    13,
-    14, // elbows
-    15,
-    16, // wrists
-    23,
-    24, // hips
-    25,
-    26, // knees
-    27,
-    28, // ankles
-  ];
+  // Define landmarks with weights (higher = more important)
+  const landmarkWeights: { [key: number]: number } = {
+    // TORSO - ZERO weight - completely ignored
+    11: 0, // left shoulder
+    12: 0, // right shoulder
+    23: 0, // left hip
+    24: 0, // right hip
 
-  let totalDistance = 0;
-  let count = 0;
+    // ARMS - High weight (2.0x) - very important
+    13: 2.0, // left elbow
+    14: 2.0, // right elbow
+    15: 2.5, // left wrist (even more important - end of limb)
+    16: 2.5, // right wrist
 
-  importantIndices.forEach((idx) => {
+    // LEGS - High weight (2.0x) - very important
+    25: 2.0, // left knee
+    26: 2.0, // right knee
+    27: 2.5, // left ankle (even more important - end of limb)
+    28: 2.5, // right ankle
+  };
+
+  let totalWeightedDistance = 0;
+  let totalWeight = 0;
+
+  Object.keys(landmarkWeights).forEach((idxStr) => {
+    const idx = parseInt(idxStr);
+    const weight = landmarkWeights[idx];
+
     if (landmarks1[idx] && landmarks2[idx]) {
       const dx = landmarks1[idx].x - landmarks2[idx].x;
       const dy = landmarks1[idx].y - landmarks2[idx].y;
       const dz = landmarks1[idx].z - landmarks2[idx].z;
 
       const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      totalDistance += distance;
-      count++;
+
+      // Apply weight to this landmark's distance
+      totalWeightedDistance += distance * weight;
+      totalWeight += weight;
     }
   });
 
-  if (count === 0) return 0;
+  if (totalWeight === 0) return 0;
 
-  const avgDistance = totalDistance / count;
+  // Calculate weighted average distance
+  const avgWeightedDistance = totalWeightedDistance / totalWeight;
 
   // Convert distance to similarity (0-1, where 1 is identical)
-  // Much more lenient - reduced multiplier from 5 to 2
-  const similarity = Math.max(0, 1 - avgDistance * 1.0);
+  const similarity = Math.max(0, 1 - avgWeightedDistance * 0.8);
 
   return similarity;
 }
@@ -136,4 +146,75 @@ function calculateAngle(a: any, b: any, c: any): number {
   }
 
   return angle;
+}
+
+// Enhanced similarity with movement penalty
+export function calculateSimilarityWithMovement(
+  currentLandmarks1: any[] | null,
+  previousLandmarks1: any[] | null,
+  currentLandmarks2: any[] | null,
+  previousLandmarks2: any[] | null,
+): number {
+  if (!currentLandmarks1 || !currentLandmarks2) return 0;
+
+  // Calculate base pose similarity
+  const poseSimilarity = calculateSimilarity(
+    currentLandmarks1,
+    currentLandmarks2,
+  );
+
+  // If no previous frames, return base similarity
+  if (!previousLandmarks1 || !previousLandmarks2) {
+    return poseSimilarity;
+  }
+
+  // Check if reference is moving (any limb endpoint)
+  const limbEndpoints = [13, 14, 15, 16, 25, 26, 27, 28]; // elbows, wrists, knees, ankles
+
+  let referenceMovementDetected = false;
+  let userMovementDetected = false;
+
+  limbEndpoints.forEach((idx) => {
+    if (currentLandmarks2[idx] && previousLandmarks2[idx]) {
+      const refDelta = {
+        x: currentLandmarks2[idx].x - previousLandmarks2[idx].x,
+        y: currentLandmarks2[idx].y - previousLandmarks2[idx].y,
+        z: currentLandmarks2[idx].z - previousLandmarks2[idx].z,
+      };
+      const refSpeed = Math.sqrt(
+        refDelta.x ** 2 + refDelta.y ** 2 + refDelta.z ** 2,
+      );
+
+      if (refSpeed > 0.005) {
+        // Movement threshold
+        referenceMovementDetected = true;
+      }
+    }
+
+    if (currentLandmarks1[idx] && previousLandmarks1[idx]) {
+      const userDelta = {
+        x: currentLandmarks1[idx].x - previousLandmarks1[idx].x,
+        y: currentLandmarks1[idx].y - previousLandmarks1[idx].y,
+        z: currentLandmarks1[idx].z - previousLandmarks1[idx].z,
+      };
+      const userSpeed = Math.sqrt(
+        userDelta.x ** 2 + userDelta.y ** 2 + userDelta.z ** 2,
+      );
+
+      if (userSpeed > 0.005) {
+        // Movement threshold
+        userMovementDetected = true;
+      }
+    }
+  });
+
+  // Apply penalty if reference is moving but user is not
+  let finalScore = poseSimilarity;
+
+  if (referenceMovementDetected && !userMovementDetected) {
+    // EXTREME PENALTY: User is frozen when they should be moving
+    finalScore *= 0.05; // Reduce score by 95%!
+  }
+
+  return finalScore;
 }
