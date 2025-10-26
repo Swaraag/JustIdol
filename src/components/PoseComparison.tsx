@@ -942,16 +942,28 @@ export default function PoseComparison({
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-red-600 to-purple-600 px-4 py-1 rounded-full border-2 border-red-400/50">
                 <p className="text-xs font-black text-white">TOTAL SYNC RATE</p>
               </div>
-
-              <h2 className="text-6xl font-black mb-3 text-center relative">
-                <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-xs animate-pulse">
-                  {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0": (similarity * 100).toFixed(0)}%
-                </span>
-                <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
-                    {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0" : (similarity * 100).toFixed(0)}%
-                </span>
-              </h2>
-
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-md font-black mb-3 text-center relative text-purple-500">
+                    Vocal {karaoke.zoneScore?.cumulativeScore ?? 0}
+                  </h2>
+                </div>
+                <div>
+                  <h2 className="text-6xl font-black mb-3 text-center relative ">
+                    <span className="absolute inset-0 text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-500 to-pink-500 blur-xs animate-pulse">
+                      {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0": (similarity * 100).toFixed(0)}%
+                    </span>
+                    <span className="relative text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-purple-400 to-pink-400">
+                        {gameMode === "both" ? combinedScore : gameMode === "sing" ? karaoke.zoneScore?.cumulativeScore ?? "0" : (similarity * 100).toFixed(0)}%
+                    </span>
+                  </h2>
+                </div>
+                <div>
+                  <h2 className="text-md font-black mb-3 text-center relative text-purple-500">
+                    Dance {Math.trunc(similarity * 100)}
+                  </h2>
+                </div>
+                </div>
               {/* Demon hunter power bar */}
               <div className="relative w-80 h-5 rounded-full overflow-hidden shadow-inner border border-red-900/50">
                 <div

@@ -31,24 +31,13 @@ export function calculateSimilarity(
   if (!landmarks1 || !landmarks2) return 0;
 
   // Define landmarks with weights (higher = more important)
+  // ONLY ARM LANDMARKS - everything else is ignored
   const landmarkWeights: { [key: number]: number } = {
-    // TORSO - ZERO weight - completely ignored
-    11: 0, // left shoulder
-    12: 0, // right shoulder
-    23: 0, // left hip
-    24: 0, // right hip
-
-    // ARMS - High weight (2.0x) - very important
+    // ARMS ONLY - High weight
     13: 2.0, // left elbow
     14: 2.0, // right elbow
     15: 2.5, // left wrist (even more important - end of limb)
     16: 2.5, // right wrist
-
-    // LEGS - High weight (2.0x) - very important
-    25: 2.0, // left knee
-    26: 2.0, // right knee
-    27: 2.5, // left ankle (even more important - end of limb)
-    28: 2.5, // right ankle
   };
 
   let totalWeightedDistance = 0;
@@ -87,10 +76,6 @@ interface BodyAngles {
   rightElbow: number;
   leftShoulder: number;
   rightShoulder: number;
-  leftKnee: number;
-  rightKnee: number;
-  leftHip: number;
-  rightHip: number;
 }
 
 // Calculate angle-based similarity
@@ -125,14 +110,12 @@ export function calculateAngleSimilarity(
 
 function calculateBodyAngles(landmarks: any[]): BodyAngles {
   return {
+    // Elbow angles (upper arm to forearm)
     leftElbow: calculateAngle(landmarks[11], landmarks[13], landmarks[15]),
     rightElbow: calculateAngle(landmarks[12], landmarks[14], landmarks[16]),
+    // Shoulder angles (upper arm angle relative to torso)
     leftShoulder: calculateAngle(landmarks[13], landmarks[11], landmarks[23]),
     rightShoulder: calculateAngle(landmarks[14], landmarks[12], landmarks[24]),
-    leftKnee: calculateAngle(landmarks[23], landmarks[25], landmarks[27]),
-    rightKnee: calculateAngle(landmarks[24], landmarks[26], landmarks[28]),
-    leftHip: calculateAngle(landmarks[11], landmarks[23], landmarks[25]),
-    rightHip: calculateAngle(landmarks[12], landmarks[24], landmarks[26]),
   };
 }
 
@@ -168,8 +151,8 @@ export function calculateSimilarityWithMovement(
     return poseSimilarity;
   }
 
-  // Check if reference is moving (any limb endpoint)
-  const limbEndpoints = [13, 14, 15, 16, 25, 26, 27, 28]; // elbows, wrists, knees, ankles
+  // Check if reference is moving (arm endpoints only)
+  const limbEndpoints = [13, 14, 15, 16]; // elbows and wrists only
 
   let referenceMovementDetected = false;
   let userMovementDetected = false;
